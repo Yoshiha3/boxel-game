@@ -1,0 +1,1 @@
+{ "id": "leaves", "name": "Leaves", "render": "cutout", "cullSameType": false, "textures": { "all": "textures/blocks/leaves.png" } }

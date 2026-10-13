@@ -1,0 +1,1 @@
+{ "id": "water", "name": "Water", "render": "liquid", "textures": { "all": "textures/blocks/water.png" } }

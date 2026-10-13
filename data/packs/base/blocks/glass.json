@@ -1,0 +1,1 @@
+{ "id": "glass", "name": "Glass", "render": "cutout", "textures": { "all": "textures/blocks/glass.png" } }

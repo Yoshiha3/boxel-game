@@ -1,0 +1,10 @@
+{
+  "name": "base",
+  "description": "Base content",
+  "blocks": [
+    "blocks/grass.json", "blocks/dirt.json", "blocks/stone.json", "blocks/cobblestone.json",
+    "blocks/sand.json", "blocks/bedrock.json", "blocks/water.json", "blocks/log.json",
+    "blocks/leaves.json", "blocks/planks.json", "blocks/glass.json"
+  ],
+  "hotbar": "hotbar.json"
+}

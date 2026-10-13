@@ -1,0 +1,1 @@
+{ "id": "log", "name": "Log", "textures": { "top": "textures/blocks/log_top.png", "bottom": "textures/blocks/log_top.png", "side": "textures/blocks/log_side.png" } }
