@@ -70,3 +70,11 @@ test('terrain generation is deterministic and layered', () => {
     }
   }
 });
+
+test('findSpawn returns a dry surface position', async () => {
+  const { findSpawn } = await import('../src/world/spawn.js');
+  const gen = createTerrainGenerator(123, defs.worldgen, registry);
+  const [x, y, z] = findSpawn(gen);
+  assert.ok(gen.heightAt(Math.floor(x), Math.floor(z)) >= gen.seaLevel);
+  assert.equal(y, gen.heightAt(Math.floor(x), Math.floor(z)) + 1);
+});

@@ -9,6 +9,10 @@ import { createTerrainGenerator } from './world/terrain.js';
 import { World } from './world/world.js';
 import { ChunkRenderer, createBlockMaterials } from './render/chunkRenderer.js';
 import { WorldRenderer } from './render/worldRenderer.js';
+import { findSpawn } from './world/spawn.js';
+import { EntityManager } from './entities/entityManager.js';
+import { TickClock } from './core/tickClock.js';
+import { Input } from './player/input.js';
 
 /** シードの既定値（URL の ?seed= で上書きできる） */
 const DEFAULT_SEED = 20260101;
@@ -65,10 +69,11 @@ async function main() {
   };
   updateFog();
 
-  // 仮の視点（プレイヤーができたら置き換える）
-  camera.position.set(0.5, terrain.heightAt(0, 0) + 20, 0.5);
+  const entities = new EntityManager(world, registry);
+  const player = entities.spawn('player', findSpawn(terrain));
+  const input = new Input(renderer.domElement);
+  const clock = new TickClock(20);
   camera.rotation.order = 'YXZ';
-  camera.rotation.set(-0.35, Math.PI * 0.75, 0);
 
   window.addEventListener('resize', () => {
     camera.aspect = container.clientWidth / container.clientHeight;
@@ -76,18 +81,31 @@ async function main() {
     renderer.setSize(container.clientWidth, container.clientHeight);
   });
 
-  /** フレームごとの描画 */
-  function frame() {
-    worldRenderer.update(camera.position.x, camera.position.z, renderDistance);
+  let lastTime = performance.now();
+  /**
+   * フレームごとの処理: ティックを進め、カメラを補間した位置に置いて描画する。
+   * @param {number} now
+   */
+  function frame(now) {
+    const elapsed = (now - lastTime) / 1000;
+    lastTime = now;
+    const ticks = clock.advance(elapsed);
+    for (let i = 0; i < ticks; i++) {
+      entities.update(clock.dt, { control: input.getControl(), yaw: input.yaw, pitch: input.pitch });
+    }
+    const [px, py, pz] = player.interpolatedPos(clock.alpha);
+    camera.position.set(px, py + player.eyeHeight, pz);
+    camera.rotation.set(input.pitch, input.yaw, 0);
+    worldRenderer.update(px, pz, renderDistance);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 
   window.__game = {
-    registry, scene, camera, renderer, world, worldRenderer, seed,
-    /** 視点を移動する */
-    teleport(x, y, z) { camera.position.set(x, y, z); },
+    registry, scene, camera, renderer, world, worldRenderer, seed, entities, player, input, clock,
+    /** プレイヤーを移動する */
+    teleport(x, y, z) { player.pos = [x, y, z]; player.prevPos = [x, y, z]; player.vel = [0, 0, 0]; },
     /** 描画距離を変更する */
     setRenderDistance(d) { renderDistance = d; updateFog(); },
   };

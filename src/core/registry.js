@@ -7,6 +7,7 @@
  */
 import { AIR, FACE_COUNT, MAX_BLOCK_TYPES } from './constants.js';
 import { LAYER_BLOCK_KEYS } from '../world/terrain.js';
+import { validateEntityDef } from '../entities/components/index.js';
 
 /** 描画の種類の番号 */
 export const RENDER = Object.freeze({ NONE: 0, CUBE: 1, CUTOUT: 2, LIQUID: 3 });
@@ -110,6 +111,7 @@ export function buildRegistry(defs) {
   validateBlocks(defs.blocks, errors);
   validateHotbar(defs.hotbar, defs.blocks, errors);
   validateWorldgen(defs.worldgen, defs.blocks, errors);
+  for (const def of Object.values(defs.entities)) validateEntityDef(def, errors);
   if (errors.length) throw new Error(`Invalid data:\n- ${errors.join('\n- ')}`);
   return new Registry(defs);
 }
@@ -182,6 +184,17 @@ export class Registry {
     const n = this.blockIndex.get(id);
     if (n === undefined) throw new Error(`unknown block "${id}"`);
     return n;
+  }
+
+  /**
+   * エンティティ定義を得る。
+   * @param {string} id
+   * @returns {any}
+   */
+  entity(id) {
+    const def = this.defs.entities[id];
+    if (!def) throw new Error(`unknown entity "${id}"`);
+    return def;
   }
 
   /**

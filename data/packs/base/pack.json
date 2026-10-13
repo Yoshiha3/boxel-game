@@ -14,6 +14,9 @@
     "blocks/planks.json",
     "blocks/glass.json"
   ],
-  "hotbar": "hotbar.json",
-  "worldgen": "worldgen.json"
+  "entities": [
+    "entities/player.json"
+  ],
+  "worldgen": "worldgen.json",
+  "hotbar": "hotbar.json"
 }
