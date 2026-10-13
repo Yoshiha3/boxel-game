@@ -15,6 +15,8 @@ src/world/chunk.js      チャンクのデータ構造と座標変換
 src/world/terrain.js    地形の生成器
 src/render/mesher.js    面カリング付きのメッシュ生成（純粋関数）
 src/render/chunkRenderer.js メッシュデータから three.js のメッシュを作る
+src/world/world.js      読み込み済みチャンクの管理、ブロックの取得・設定、読み込みと破棄
+src/render/worldRenderer.js World と ChunkRenderer をつなぐ毎フレームの処理
 tools/gen-textures.mjs  base パックのテクスチャ PNG を生成する
 src/core/packLoader.js  データパックの読み込みと深いマージ
 src/core/registry.js    定義の検証、数値IDとテーブルの構築
@@ -34,8 +36,21 @@ main()
   buildTextureAtlas(registry)           PNG を canvas に並べて CanvasTexture にする
     loadImage(path)
     buildTileUVs(count)                 タイル番号 → UV の表
+  readSeed()                            URL の ?seed=
+  createTerrainGenerator(seed, worldgen, registry)
+  new World(registry, terrain)
+  new WorldRenderer(world, chunkRenderer, tileUVs)
   requestAnimationFrame(frame)
-    frame()                             毎フレーム描画
+    frame()
+      worldRenderer.update(x, z, renderDistance)
+        world.update(cx, cz, R, maxLoads)         近い順に生成、遠いものを破棄
+          world.loadChunk(cx, cz)
+            generator.generate(chunk)
+        chunkRenderer.removeChunk(key)            破棄・範囲外のメッシュを外す
+        world.takeChunksToMesh(cx, cz, R, max)    隣が揃った dirty チャンク
+        buildChunkMeshData(chunk, ..., world.neighborLookup(chunk))
+        chunkRenderer.setChunkMesh(...)
+      renderer.render(scene, camera)
 ```
 
 ### データの読み込み

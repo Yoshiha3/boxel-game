@@ -5,10 +5,26 @@ import * as THREE from 'three';
 import { loadRegistry } from './core/dataLoader.js';
 import { buildTextureAtlas } from './render/atlas.js';
 import { CHUNK_SIZE } from './core/constants.js';
-import { Chunk, chunkKey, toChunkCoord, toLocalCoord } from './world/chunk.js';
 import { createTerrainGenerator } from './world/terrain.js';
-import { buildChunkMeshData } from './render/mesher.js';
+import { World } from './world/world.js';
 import { ChunkRenderer, createBlockMaterials } from './render/chunkRenderer.js';
+import { WorldRenderer } from './render/worldRenderer.js';
+
+/** シードの既定値（URL の ?seed= で上書きできる） */
+const DEFAULT_SEED = 20260101;
+
+/**
+ * URL パラメータからシードを読む。数値でなければ文字列をハッシュしてシードにする。
+ * @returns {number}
+ */
+function readSeed() {
+  const v = new URLSearchParams(location.search).get('seed');
+  if (v === null || v === '') return DEFAULT_SEED;
+  if (/^-?\d+$/.test(v)) return Number(v) >>> 0;
+  let h = 2166136261;
+  for (const c of v) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return h >>> 0;
+}
 
 /**
  * WebGL レンダラーを作り、コンテナに追加する。
@@ -37,27 +53,22 @@ async function main() {
 
   const atlas = await buildTextureAtlas(registry);
   const chunkRenderer = new ChunkRenderer(scene, createBlockMaterials(atlas.texture));
-  // 仮表示: 周囲のチャンクを生成して描画する（World ができたら置き換える）
-  const terrain = createTerrainGenerator(1, registry.defs.worldgen, registry);
-  const chunks = new Map();
-  const R = 3;
-  for (let cx = -R; cx <= R; cx++) {
-    for (let cz = -R; cz <= R; cz++) {
-      const c = new Chunk(cx, cz);
-      terrain.generate(c);
-      chunks.set(chunkKey(cx, cz), c);
-    }
-  }
-  for (const c of chunks.values()) {
-    const data = buildChunkMeshData(c, registry, atlas.tileUVs, (x, y, z) => {
-      const wx = c.cx * CHUNK_SIZE + x, wz = c.cz * CHUNK_SIZE + z;
-      const n = chunks.get(chunkKey(toChunkCoord(wx), toChunkCoord(wz)));
-      return n ? n.get(toLocalCoord(wx), y, toLocalCoord(wz)) : 0;
-    });
-    chunkRenderer.setChunkMesh(chunkKey(c.cx, c.cz), c.cx, c.cz, data);
-  }
-  camera.position.set(-40, 110, -40);
-  camera.lookAt(10, 60, 10);
+  const seed = readSeed();
+  const terrain = createTerrainGenerator(seed, registry.defs.worldgen, registry);
+  const world = new World(registry, terrain);
+  const worldRenderer = new WorldRenderer(world, chunkRenderer, atlas.tileUVs);
+  let renderDistance = 6;
+  /** 描画距離に合わせてフォグを設定する（チャンクの端を隠す） */
+  const updateFog = () => {
+    const far = renderDistance * CHUNK_SIZE;
+    scene.fog = new THREE.Fog(scene.background, far * 0.6, far);
+  };
+  updateFog();
+
+  // 仮の視点（プレイヤーができたら置き換える）
+  camera.position.set(0.5, terrain.heightAt(0, 0) + 20, 0.5);
+  camera.rotation.order = 'YXZ';
+  camera.rotation.set(-0.35, Math.PI * 0.75, 0);
 
   window.addEventListener('resize', () => {
     camera.aspect = container.clientWidth / container.clientHeight;
@@ -67,12 +78,19 @@ async function main() {
 
   /** フレームごとの描画 */
   function frame() {
+    worldRenderer.update(camera.position.x, camera.position.z, renderDistance);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 
-  window.__game = { registry, scene, camera, renderer, chunkRenderer };
+  window.__game = {
+    registry, scene, camera, renderer, world, worldRenderer, seed,
+    /** 視点を移動する */
+    teleport(x, y, z) { camera.position.set(x, y, z); },
+    /** 描画距離を変更する */
+    setRenderDistance(d) { renderDistance = d; updateFog(); },
+  };
 }
 
 main().catch((err) => {

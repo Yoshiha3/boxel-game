@@ -125,3 +125,25 @@ liquid は自動的に `liquid: true` になる。
   - cutout: `alphaTest: 0.5` で切り抜き（ソート不要）
   - liquid: `transparent`、`opacity: 0.7`、`depthWrite: false`、両面描画。`renderOrder = 1` で不透明なものの後に描く
 - チャンクを取り除くときは、ジオメトリを `dispose` して GPU のメモリを解放する
+
+## ワールド（`src/world/world.js`）
+- `World` は読み込み済みチャンクを `Map<"cx,cz", Chunk>` で持つ。three.js には依存しない
+- `getBlock(x, y, z)` / `setBlock(x, y, z, id)` はワールド座標で扱う。未読み込みのチャンクと高さの範囲外は空気として扱い、設定は失敗（false）
+- 編集差分: `setBlock` の内容は `edits`（チャンクキー → 添字 → ID）に記録し、チャンクを生成し直したときに当て直す。チャンクを破棄しても差分は残る
+- dirty: メッシュの作り直しが必要なチャンクの集合。`setBlock` は該当チャンクと、境界上なら隣のチャンクを dirty にする。`loadChunk` は自分と、読み込み済みの隣接チャンクを dirty にする
+
+### 読み込み範囲（描画距離 = R チャンク）
+| 範囲（チャンク単位の円） | 内容 |
+|---|---|
+| 半径 R 以内 | メッシュを作って描画する |
+| 半径 R + 1 以内 | 生成する（メッシュ化で隣接チャンクを参照するため） |
+| 半径 R + 2 より外 | 破棄する（R+1〜R+2 は、行き来でのやり直しを防ぐ余裕） |
+
+- `update(cx, cz, R, maxLoads)` は、近い順に最大 `maxLoads` 個を生成し、範囲外を破棄する
+- `takeChunksToMesh(cx, cz, R, max)` は、dirty のうち半径 R 以内で隣接4チャンクが揃ったものを近い順に最大 `max` 個返す
+- 1フレームあたりの上限: 生成 2 個、メッシュ化 2 個（`WorldRenderer` の `maxLoadsPerFrame` / `maxMeshesPerFrame`）
+- 描画距離の外に出たメッシュは外し、チャンクを dirty に戻す（戻ってきたら作り直す）
+- 描画距離に合わせてフォグを掛ける（`R × 16 × 0.6` から `R × 16` まで）
+
+## シード
+- URL の `?seed=` で指定する。整数ならその値を、それ以外の文字列ならハッシュを使う。指定がなければ `20260101`
