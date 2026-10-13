@@ -49,6 +49,7 @@
 | `opaque` | boolean | cube なら true | 隣接する面を隠すか |
 | `breakable` | boolean | true | プレイヤーが壊せるか |
 | `cullSameType` | boolean | true | 同じ種類のブロックと接する面を隠すか（葉は false にして内側の面も描く） |
+| `translucent` | boolean | liquid なら true | 液体を半透明のマテリアルで描くか。false（溶岩）なら不透明のマテリアルで描く。面の隠し方は液体のまま（隣のブロックの面は隠さない） |
 | `fog` | `{color, near, far}` | なし | 液体用。視点がこの液体の中にあるときのフォグと背景色（`color` は CSS の色文字列、`near` / `far` はブロック） |
 
 liquid は自動的に `liquid: true` になる。
@@ -82,7 +83,8 @@ liquid は自動的に `liquid: true` になる。
   "minY": 5,
   "sampleStep": 4,
   "tunnel": { "frequency": 0.01, "verticalScale": 1.6, "radius": 0.15 },
-  "cavern": { "frequency": 0.015, "threshold": 0.75, "maxY": 45 }
+  "cavern": { "frequency": 0.015, "threshold": 0.75, "maxY": 45 },
+  "fill": { "block": "lava", "maxY": 10 }
 }
 ```
 | 項目 | 説明 |
@@ -94,6 +96,7 @@ liquid は自動的に `liquid: true` になる。
 | `tunnel.radius` | トンネルの太さ |
 | `cavern.frequency` / `threshold` | 大空洞のノイズの周波数と、削るしきい値（大きいほど少ない） |
 | `cavern.maxY` | 大空洞が出る高さの上限（これより上は 1 ブロックごとにしきい値が 0.05 上がり、次第に出なくなる） |
+| `fill` | 省略可。`maxY` 以下で削った場所を、空気ではなく `block` で埋める（base パックは溶岩で、深い洞窟の底が溶岩だまりになる） |
 
 - 削り具合 `f = min(n1² + n2² - radius², threshold + max(0, y - maxY) × 0.05 - n3)`。`f < 0` なら削る
   - n1, n2, n3 は 3D シンプレックスノイズ（シード + 10, 11, 12）。トンネルは2つのノイズがどちらも 0 に近い「線」になる部分
@@ -211,7 +214,7 @@ liquid は自動的に `liquid: true` になる。
 - マテリアルは全チャンクで共有する `MeshBasicMaterial`（頂点カラーで陰影）
   - opaque: 不透明
   - cutout: `alphaTest: 0.5` で切り抜き（ソート不要）
-  - liquid: `transparent`、`opacity: 0.7`、`depthWrite: false`、両面描画。`renderOrder = 1` で不透明なものの後に描く
+  - liquid: 半透明の液体（`translucent: true`）だけ。`transparent`、`opacity: 0.7`、`depthWrite: false`、両面描画。`renderOrder = 1` で不透明なものの後に描く
 - チャンクを取り除くときは、ジオメトリを `dispose` して GPU のメモリを解放する
 
 ## ワールド（`src/world/world.js`）
@@ -360,7 +363,8 @@ liquid は自動的に `liquid: true` になる。
 - デバッグ表示: FPS、ティックレート、座標、チャンク座標、読み込み・メッシュ化済みのチャンク数、三角形数、描画呼び出し数、飛行・接地の状態、シード
 
 ## 水の描画と判定
-- 水は静的（流れない）。プレイヤーが置くことも壊すこともできる
+- 水と溶岩は静的（流れない）。プレイヤーが置くことも壊すこともできる
+- 溶岩: 不透明に描く液体（`translucent: false`）。中に入ると橙色のフォグ（0.2〜3 ブロック）。動き（浮く・沈む）は水と同じ waterPhysics で、ダメージはまだない（体力の仕組みがないため）
 - 見た目: 半透明（opacity 0.7）、両面描画、`depthWrite: false`。水面（上が液体でも固体でもない水ブロック）は高さ 0.875 に下げる
 - 液体の中かどうか（`liquidAt`、`src/physics/liquid.js`）: 点のあるブロックが液体なら液体の中。ただし水面のブロックは、見た目に合わせて高さ 0.875 までを液体とする
 - 水中の見た目: 毎フレーム、カメラの位置が液体の中なら、その液体の `fog` をシーンのフォグと背景色に使う（水: `#1d4a8c`、0.5〜14 ブロック）。外に出たら空のフォグに戻す

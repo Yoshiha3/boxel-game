@@ -1,0 +1,8 @@
+{
+  "id": "lava",
+  "name": "Lava",
+  "render": "liquid",
+  "translucent": false,
+  "textures": { "all": "textures/blocks/lava.png" },
+  "fog": { "color": "#c84a10", "near": 0.2, "far": 3 }
+}

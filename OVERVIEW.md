@@ -160,7 +160,7 @@ carve(chunk)                            地形の生成後に呼ぶ
   fieldAtGrid(gx, gy, gz)               格子点の削り具合（チャンク分をまとめて計算）
   terrain.heightAt(x, z)                境界の外1列を含む地表の高さ
   carvable(height, x, y, z)             高さの範囲・液体に接していないか
-  inCaveShape(grid, x, y, z)            三線形補間した値が負なら削る
+  inCaveShape(grid, x, y, z)            三線形補間した値が負なら削る（fill.maxY 以下は溶岩で埋める）
 isCarved(x, y, z)                       1点だけ判定（木・スポーンの判定に使う）
 ```
 

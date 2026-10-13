@@ -9,6 +9,7 @@
     "blocks/sand.json",
     "blocks/bedrock.json",
     "blocks/water.json",
+    "blocks/lava.json",
     "blocks/log.json",
     "blocks/leaves.json",
     "blocks/planks.json",

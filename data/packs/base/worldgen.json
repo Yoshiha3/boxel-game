@@ -60,6 +60,10 @@
       "frequency": 0.015,
       "threshold": 0.75,
       "maxY": 45
+    },
+    "fill": {
+      "block": "lava",
+      "maxY": 10
     }
   }
 }

@@ -120,7 +120,8 @@ export function buildChunkMeshData(chunk, registry, tileUVs, getNeighbor) {
         if (b === AIR) continue;
         const render = registry.renderType[b];
         if (render === RENDER.NONE) continue;
-        const buf = buffers[render];
+        // 半透明でない液体（溶岩など）は不透明のマテリアルで描く（面の隠し方は液体のまま）
+        const buf = render === RENDER.LIQUID && !registry.blocks[b].translucent ? buffers[RENDER.CUBE] : buffers[render];
         const isLiquid = render === RENDER.LIQUID;
         // 液体の上が液体でも固体でもなければ、水面として少し低くする
         let topHeight = 1;

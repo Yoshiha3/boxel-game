@@ -5,6 +5,7 @@
  * - 大空洞: 低周波の 3D ノイズ n3 が threshold を超える部分を削る（maxY より上では次第に出なくなる）
  * - ノイズは sampleStep 間隔の格子点（ワールド座標にそろえる）だけで計算し、間は三線形補間する
  * - 削る前に液体だった場所、または6方向の隣が液体だった場所は削らない（海や川の下に穴を開けない）
+ * - fill を指定すると、fill.maxY 以下で削った場所は空気ではなく fill.block（溶岩など）で埋める
  * 判定は地形の関数だけで行うので、チャンクを生成する順番に関係なく同じ結果になる。
  */
 import { AIR, CHUNK_SIZE, WORLD_HEIGHT } from '../core/constants.js';
@@ -16,9 +17,10 @@ const NEIGHBORS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 
 /**
  * 洞窟の設定を検証する。
  * @param {any} caves worldgen.caves
+ * @param {(id: string) => boolean} hasBlock
  * @param {string[]} errors
  */
-export function validateCaves(caves, errors) {
+export function validateCaves(caves, hasBlock, errors) {
   if (caves === undefined) return;
   const num = (v) => typeof v === 'number' && Number.isFinite(v);
   if (!num(caves.minY)) errors.push('worldgen.caves.minY must be a number');
@@ -32,6 +34,10 @@ export function validateCaves(caves, errors) {
   for (const key of ['frequency', 'threshold', 'maxY']) {
     if (!num(caves.cavern?.[key])) errors.push(`worldgen.caves.cavern.${key} must be a number`);
   }
+  if (caves.fill !== undefined) {
+    if (!hasBlock(caves.fill.block)) errors.push(`worldgen.caves.fill: unknown block "${caves.fill.block}"`);
+    if (!num(caves.fill.maxY)) errors.push('worldgen.caves.fill.maxY must be a number');
+  }
 }
 
 /**
@@ -39,9 +45,10 @@ export function validateCaves(caves, errors) {
  * @param {number} seed
  * @param {any} worldgen worldgen.json の内容
  * @param {{heightAt: (x: number, z: number) => number, seaLevel: number}} terrain
+ * @param {import('../core/registry.js').Registry} registry
  * @returns {{isCarved: (x: number, y: number, z: number) => boolean, carve: (chunk: import('./chunk.js').Chunk) => void}}
  */
-export function createCaveCarver(seed, worldgen, terrain) {
+export function createCaveCarver(seed, worldgen, terrain, registry) {
   const cfg = worldgen.caves;
   if (!cfg) return { isCarved: () => false, carve() {} };
   const { minY, sampleStep: step, tunnel, cavern } = cfg;
@@ -50,6 +57,9 @@ export function createCaveCarver(seed, worldgen, terrain) {
   const n3 = createNoise3D(seed + 12);
   const r2 = tunnel.radius * tunnel.radius;
   const { seaLevel } = terrain;
+  /** fill.maxY 以下で削った場所を埋めるブロック（なければ空気のみ） */
+  const fillId = cfg.fill ? registry.blockId(cfg.fill.block) : AIR;
+  const fillMaxY = cfg.fill ? cfg.fill.maxY : -1;
 
   /**
    * 格子点 (gx, gy, gz) での「削り具合」。負なら削る。
@@ -132,7 +142,7 @@ export function createCaveCarver(seed, worldgen, terrain) {
   }
 
   /**
-   * チャンクのブロックを削る（地形の生成後、構造物の配置前に呼ぶ）。
+   * チャンクのブロックを削る（地形の生成後、構造物の配置前に呼ぶ）。fill.maxY 以下は fill.block で埋める。
    * 格子点の値と、境界の外1列を含む地表の高さを、先にまとめて計算する。
    * @param {import('./chunk.js').Chunk} chunk
    */
@@ -160,7 +170,7 @@ export function createCaveCarver(seed, worldgen, terrain) {
         const x = ox + lx, z = oz + lz;
         for (let y = minY; y <= height(x, z); y++) {
           if (chunk.get(lx, y, lz) === AIR) continue;
-          if (carvable(height, x, y, z) && inCaveShape(grid, x, y, z)) chunk.set(lx, y, lz, AIR);
+          if (carvable(height, x, y, z) && inCaveShape(grid, x, y, z)) chunk.set(lx, y, lz, y <= fillMaxY ? fillId : AIR);
         }
       }
     }

@@ -23,7 +23,7 @@ const WATER = registry.blockId('water');
  */
 function terrainAndCarved(cx, cz) {
   const terrain = createTerrainGenerator(SEED, defs.worldgen, registry);
-  const caves = createCaveCarver(SEED, defs.worldgen, terrain);
+  const caves = createCaveCarver(SEED, defs.worldgen, terrain, registry);
   const before = new Chunk(cx, cz), after = new Chunk(cx, cz);
   terrain.generate(before);
   terrain.generate(after);
@@ -35,7 +35,7 @@ test('isCarved agrees with carve for every block', () => {
   for (const [cx, cz] of [[0, 0], [-3, 2], [5, -4]]) {
     const { caves, before, after } = terrainAndCarved(cx, cz);
     for (let x = 0; x < CHUNK_SIZE; x++) for (let z = 0; z < CHUNK_SIZE; z++) for (let y = 0; y < 128; y++) {
-      const carved = before.get(x, y, z) !== AIR && after.get(x, y, z) === AIR;
+      const carved = before.get(x, y, z) !== after.get(x, y, z);
       assert.equal(caves.isCarved(cx * CHUNK_SIZE + x, y, cz * CHUNK_SIZE + z) && before.get(x, y, z) !== AIR, carved,
         `mismatch at ${cx * CHUNK_SIZE + x},${y},${cz * CHUNK_SIZE + z}`);
     }
@@ -51,9 +51,9 @@ test('caves exist, reach the surface somewhere, and never touch bedrock or minY'
       for (let x = 0; x < CHUNK_SIZE; x++) for (let z = 0; z < CHUNK_SIZE; z++) {
         for (let y = 0; y < minY; y++) assert.equal(after.get(x, y, z), before.get(x, y, z), 'below minY is untouched');
         assert.equal(after.get(x, 0, z), BEDROCK);
-        for (let y = minY; y < 128; y++) if (before.get(x, y, z) !== AIR && after.get(x, y, z) === AIR) carved++;
+        for (let y = minY; y < 128; y++) if (before.get(x, y, z) !== after.get(x, y, z)) carved++;
         const h = terrain.heightAt(cx * CHUNK_SIZE + x, cz * CHUNK_SIZE + z);
-        if (after.get(x, h, z) === AIR) entrances++;
+        if (after.get(x, h, z) !== before.get(x, h, z)) entrances++;
       }
     }
   }
@@ -113,11 +113,28 @@ test('trees and the spawn point are never placed over carved ground', () => {
 
 test('cave settings are validated', () => {
   const bad = structuredClone(defs);
-  bad.worldgen.caves = { minY: 'low', sampleStep: 3, tunnel: { frequency: 0.1 }, cavern: {} };
+  bad.worldgen.caves = { minY: 'low', sampleStep: 3, tunnel: { frequency: 0.1 }, cavern: {}, fill: { block: 'magma' } };
   const msg = (() => { try { buildRegistry(bad); } catch (e) { return e.message; } return ''; })();
-  for (const re of [/caves.minY/, /sampleStep/, /tunnel.radius/, /cavern.threshold/]) assert.match(msg, re);
+  for (const re of [/caves.minY/, /sampleStep/, /tunnel.radius/, /cavern.threshold/, /unknown block "magma"/, /fill.maxY/]) assert.match(msg, re);
   const none = structuredClone(defs);
   delete none.worldgen.caves;
   const terrain = createTerrainGenerator(SEED, none.worldgen, buildRegistry(none));
-  assert.equal(createCaveCarver(SEED, none.worldgen, terrain).isCarved(0, 30, 0), false, 'no caves when omitted');
+  assert.equal(createCaveCarver(SEED, none.worldgen, terrain, buildRegistry(none)).isCarved(0, 30, 0), false, 'no caves when omitted');
+});
+
+test('carved cells at or below fill.maxY become lava, above stay air', () => {
+  const LAVA = registry.blockId('lava');
+  const { maxY } = defs.worldgen.caves.fill;
+  let lava = 0;
+  for (let cx = -3; cx < 3; cx++) {
+    for (let cz = -3; cz < 3; cz++) {
+      const { before, after } = terrainAndCarved(cx, cz);
+      for (let x = 0; x < CHUNK_SIZE; x++) for (let z = 0; z < CHUNK_SIZE; z++) for (let y = 1; y < 128; y++) {
+        if (before.get(x, y, z) === after.get(x, y, z)) continue;
+        assert.equal(after.get(x, y, z), y <= maxY ? LAVA : AIR, `y=${y}`);
+        if (y <= maxY) lava++;
+      }
+    }
+  }
+  assert.ok(lava > 0, 'some lava pools exist');
 });

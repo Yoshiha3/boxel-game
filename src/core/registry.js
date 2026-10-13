@@ -20,7 +20,7 @@ const RENDER_BY_NAME = { cube: RENDER.CUBE, cutout: RENDER.CUTOUT, liquid: RENDE
 /**
  * ブロック定義に既定値を補った「正規化済みの定義」を返す。
  * @param {any} def ブロック定義（JSON）
- * @returns {{id: string, name: string, render: string, solid: boolean, opaque: boolean, liquid: boolean, breakable: boolean, cullSameType: boolean, textures: any}}
+ * @returns {{id: string, name: string, render: string, solid: boolean, opaque: boolean, liquid: boolean, breakable: boolean, cullSameType: boolean, translucent: boolean, textures: any}}
  */
 export function normalizeBlock(def) {
   const render = def.render ?? 'cube';
@@ -34,6 +34,7 @@ export function normalizeBlock(def) {
     opaque: def.opaque ?? render === 'cube',
     breakable: def.breakable ?? true,
     cullSameType: def.cullSameType ?? true,
+    translucent: def.translucent ?? liquid,
   };
 }
 
@@ -132,7 +133,7 @@ export function buildRegistry(defs) {
   const hasBlock = (id) => typeof id === 'string' && id in defs.blocks;
   for (const def of Object.values(defs.structures)) validateStructureDef(def, hasBlock, errors);
   validatePlacementRules(defs.worldgen?.structures, defs.structures, hasBlock, errors);
-  validateCaves(defs.worldgen?.caves, errors);
+  validateCaves(defs.worldgen?.caves, hasBlock, errors);
   if (errors.length) throw new Error(`Invalid data:\n- ${errors.join('\n- ')}`);
   return new Registry(defs);
 }

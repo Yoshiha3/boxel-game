@@ -13,6 +13,7 @@ const registry = buildRegistry({
     glass: { id: 'glass', render: 'cutout', textures: { all: 'g.png' } },
     leaves: { id: 'leaves', render: 'cutout', cullSameType: false, textures: { all: 'l.png' } },
     water: { id: 'water', render: 'liquid', textures: { all: 'w.png' } },
+    lava: { id: 'lava', render: 'liquid', translucent: false, textures: { all: 'v.png' } },
   },
 });
 const STONE = registry.blockId('stone');
@@ -85,4 +86,12 @@ test('isFaceHidden rules', () => {
   assert.equal(isFaceHidden(registry, WATER, STONE), true);
   assert.equal(isFaceHidden(registry, WATER, GLASS), false);
   assert.equal(isFaceHidden(registry, GLASS, GLASS), true);
+});
+
+test('non-translucent liquids go to the opaque layer but keep liquid culling', () => {
+  const LAVA = registry.blockId('lava');
+  const m = mesh([[5, 10, 5, LAVA], [6, 10, 5, LAVA], [5, 10, 6, STONE]]);
+  assert.equal(m.liquid.faceCount, 0);
+  // 溶岩 2 個: 12 面から、溶岩同士の 2 面と石に接する 1 面を除いて 9 面。石は溶岩で隠れないので 6 面
+  assert.equal(m.opaque.faceCount, 9 + 6);
 });

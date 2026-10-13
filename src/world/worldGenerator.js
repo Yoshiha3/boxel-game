@@ -12,7 +12,7 @@ import { createCaveCarver } from './caves.js';
  */
 export function createWorldGenerator(seed, worldgen, registry) {
   const terrain = createTerrainGenerator(seed, worldgen, registry);
-  const caves = createCaveCarver(seed, worldgen, terrain);
+  const caves = createCaveCarver(seed, worldgen, terrain, registry);
   // 構造物とスポーンの判定では、洞窟で削られた場所も考慮する
   const ground = { ...terrain, isCarved: caves.isCarved };
   const structures = createStructurePlacer(seed, worldgen, registry, ground);

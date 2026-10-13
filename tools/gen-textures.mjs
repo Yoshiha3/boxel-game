@@ -159,6 +159,11 @@ const TEXTURES = {
   },
   sand: noisy([219, 207, 160], 0.15),
   bedrock: (x, y, r) => shade([80, 80, 80], r() < 0.5 ? 0.5 + r() * 0.3 : 1 + r() * 0.3),
+  lava: (x, y, r) => {
+    // 明るい黄色の筋が流れるような模様
+    const streak = Math.sin((x + y * 0.5) * 0.9) + Math.sin((y - x * 0.3) * 1.3);
+    return streak > 1.1 ? shade([255, 210, 80], 0.9 + r() * 0.15) : shade([220, 90, 20], 0.85 + r() * 0.3);
+  },
   water: (x, y, r) => [...shade([48, 96, 200], 0.9 + r() * 0.15 + (((x + y * 2) % 8) === 0 ? 0.15 : 0)), 255],
   log_side: (x, y, r) => shade(BARK, (x % 4 === 0 ? 0.75 : 1) * (0.85 + r() * 0.25)),
   log_top: (x, y, r) => {
