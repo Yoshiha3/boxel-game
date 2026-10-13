@@ -72,10 +72,20 @@ export class Input {
       for (const fn of this.wheelListeners) fn(Math.sign(e.deltaY));
     }, { passive: true });
     document.addEventListener('pointerlockchange', () => {
-      this.locked = document.pointerLockElement === this.element;
-      if (!this.locked) this.keys.clear();
-      for (const fn of this.lockListeners) fn(this.locked);
+      this.setLocked(document.pointerLockElement === this.element);
     });
+  }
+
+  /**
+   * ロック状態を更新し、リスナーに知らせる。
+   * 通常は pointerlockchange から呼ばれる。自動テストではポインターロックが使えないことがあるので、
+   * デバッグ用フックから直接呼んでロック状態を再現する。
+   * @param {boolean} locked
+   */
+  setLocked(locked) {
+    this.locked = locked;
+    if (!locked) this.keys.clear();
+    for (const fn of this.lockListeners) fn(locked);
   }
 
   /**

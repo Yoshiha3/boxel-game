@@ -13,6 +13,23 @@ import { findSpawn } from './world/spawn.js';
 import { EntityManager } from './entities/entityManager.js';
 import { TickClock } from './core/tickClock.js';
 import { Input } from './player/input.js';
+import { Settings } from './ui/settings.js';
+import { Menu } from './ui/menu.js';
+
+/** マウス感度 1.0 のときの回転量（ラジアン/ピクセル） */
+const BASE_SENSITIVITY = 0.0025;
+
+/**
+ * localStorage を返す（使えない環境では null）。
+ * @returns {Storage | null}
+ */
+function safeLocalStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 /** シードの既定値（URL の ?seed= で上書きできる） */
 const DEFAULT_SEED = 20260101;
@@ -67,13 +84,47 @@ async function main() {
     const far = renderDistance * CHUNK_SIZE;
     scene.fog = new THREE.Fog(scene.background, far * 0.6, far);
   };
-  updateFog();
 
   const entities = new EntityManager(world, registry);
   const player = entities.spawn('player', findSpawn(terrain));
   const input = new Input(renderer.domElement);
   const clock = new TickClock(20);
   camera.rotation.order = 'YXZ';
+
+  const settings = new Settings(registry.defs.settings, safeLocalStorage());
+  settings.subscribe((key, value) => applySetting(key, value));
+  /**
+   * 設定値をゲームに反映する。
+   * @param {string} key
+   * @param {any} value
+   */
+  function applySetting(key, value) {
+    if (key === 'renderDistance') {
+      renderDistance = value;
+      updateFog();
+    } else if (key === 'fov') {
+      camera.fov = value;
+      camera.updateProjectionMatrix();
+    } else if (key === 'mouseSensitivity') {
+      input.sensitivity = BASE_SENSITIVITY * value;
+    } else if (key === 'tickRate') {
+      clock.setTickRate(value);
+    }
+  }
+
+  // メニュー: 起動時は表示しておき、ボタンを押したときだけポインターロックに入る
+  const menu = new Menu(settings, () => {
+    input.requestLock().catch(() => menu.setMessage('ブラウザに拒否されました。もう一度押してください'));
+  });
+  menu.setReady('開始');
+  input.lockListeners.push((locked) => {
+    if (locked) {
+      menu.hide();
+    } else {
+      menu.setReady('ゲームに戻る');
+      menu.show();
+    }
+  });
 
   window.addEventListener('resize', () => {
     camera.aspect = container.clientWidth / container.clientHeight;
@@ -89,7 +140,8 @@ async function main() {
   function frame(now) {
     const elapsed = (now - lastTime) / 1000;
     lastTime = now;
-    const ticks = clock.advance(elapsed);
+    // メニュー表示中はゲームを止める（チャンクの読み込みと描画は続ける）
+    const ticks = menu.visible ? 0 : clock.advance(elapsed);
     for (let i = 0; i < ticks; i++) {
       entities.update(clock.dt, { control: input.getControl(), yaw: input.yaw, pitch: input.pitch });
     }
@@ -107,7 +159,12 @@ async function main() {
     /** プレイヤーを移動する */
     teleport(x, y, z) { player.pos = [x, y, z]; player.prevPos = [x, y, z]; player.vel = [0, 0, 0]; },
     /** 描画距離を変更する */
-    setRenderDistance(d) { renderDistance = d; updateFog(); },
+    setRenderDistance(d) { settings.set('renderDistance', d); },
+    settings, menu,
+    /** ポインターロックの状態を再現する（自動テスト用。実際のロックは行わない） */
+    simulateLock(locked) { input.setLocked(locked); },
+    /** 設定を変更する */
+    setSetting(key, value) { return settings.set(key, value); },
   };
 }
 

@@ -12,6 +12,27 @@
 </head>
 <body>
   <div id="app"></div>
+  <div id="menu" class="overlay">
+    <div class="panel">
+      <h1>boxel-game</h1>
+      <button id="menu-resume" type="button" disabled>読み込み中…</button>
+      <p id="menu-message" class="message" aria-live="polite"></p>
+      <section>
+        <h2>設定</h2>
+        <div id="settings-list" class="settings"></div>
+      </section>
+      <section class="controls">
+        <h2>操作</h2>
+        <dl>
+          <dt>W A S D</dt><dd>移動</dd>
+          <dt>Space</dt><dd>ジャンプ（2回押しで飛行の切り替え）</dd>
+          <dt>Shift</dt><dd>下降（飛行中）</dd>
+          <dt>Ctrl</dt><dd>走る</dd>
+          <dt>Esc</dt><dd>メニュー</dd>
+        </dl>
+      </section>
+    </div>
+  </div>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

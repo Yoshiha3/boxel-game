@@ -8,6 +8,7 @@
 import { AIR, FACE_COUNT, MAX_BLOCK_TYPES } from './constants.js';
 import { LAYER_BLOCK_KEYS } from '../world/terrain.js';
 import { validateEntityDef } from '../entities/components/index.js';
+import { validateSettings } from '../ui/settings.js';
 
 /** 描画の種類の番号 */
 export const RENDER = Object.freeze({ NONE: 0, CUBE: 1, CUTOUT: 2, LIQUID: 3 });
@@ -112,6 +113,7 @@ export function buildRegistry(defs) {
   validateHotbar(defs.hotbar, defs.blocks, errors);
   validateWorldgen(defs.worldgen, defs.blocks, errors);
   for (const def of Object.values(defs.entities)) validateEntityDef(def, errors);
+  validateSettings(defs.settings, errors);
   if (errors.length) throw new Error(`Invalid data:\n- ${errors.join('\n- ')}`);
   return new Registry(defs);
 }

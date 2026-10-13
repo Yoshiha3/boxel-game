@@ -25,6 +25,8 @@ src/entities/entityManager.js エンティティの更新と移動
 src/entities/components/ コンポーネント（playerControl, flight, walk, gravity, collision）
 src/player/input.js     キーボード・マウス・ポインターロック
 src/player/doubleTap.js キーの2回押しの検出
+src/ui/settings.js      設定値の検証・保存・通知
+src/ui/menu.js          メニュー画面と設定画面
 tools/gen-textures.mjs  base パックのテクスチャ PNG を生成する
 src/core/packLoader.js  データパックの読み込みと深いマージ
 src/core/registry.js    定義の検証、数値IDとテーブルの構築
@@ -54,9 +56,18 @@ main()
     orderedComponentNames(components)   実行順
   new Input(canvas)
   new TickClock(tickRate)
+  new Settings(defs.settings, localStorage)
+  settings.subscribe(applySetting)      描画距離・視野角・感度・ティックレートを反映
+  new Menu(settings, onResume)
+    buildSettings(container)            settings.json から入力欄を作る
+  [開始 / ゲームに戻る ボタン]
+    input.requestLock()                 失敗したら menu.setMessage()
+  [pointerlockchange]
+    input.setLocked(locked)
+      menu.hide() / menu.show()
   requestAnimationFrame(frame)
     frame(now)
-      clock.advance(elapsed)                      実行するティック数
+      clock.advance(elapsed)                      実行するティック数（メニュー表示中は 0）
       input.getControl()                          キー状態 + 溜めた飛行切り替え（consumeToggleFlight）
       entities.update(dt, input)                  ティックごと
         updateEntity(e, ctx)

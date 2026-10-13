@@ -207,3 +207,32 @@ liquid は自動的に `liquid: true` になる。
 
 ## スポーン（`src/world/spawn.js`）
 - 原点から外側へ、4 ブロック間隔の正方形の輪で、地表が海面以上の場所を探す。見つかった地表の 1 つ上に立たせる
+
+## メニュー（`src/ui/menu.js`）
+- 起動時はメニューを表示した状態で始める。データの読み込みが終わると「開始」ボタンが押せるようになる
+- ポインターロックに入るのは、メニューの「開始」/「ゲームに戻る」ボタンを押したときだけ（canvas をクリックしてもロックしない）
+- Esc でロックが外れると（ブラウザ標準の動作）、`pointerlockchange` で検知してメニューを表示する。ボタンの文字は「ゲームに戻る」になる
+- メニュー表示中はティックを進めない（ゲームが止まる）。チャンクの読み込みと描画は続ける
+- `requestPointerLock()` が失敗したとき（Esc 直後の再ロックはブラウザに拒否されることがある）は、メニューにもう一度押すよう表示する
+- 自動テスト用: `window.__game.simulateLock(true/false)` でロック状態を再現できる（自動操作のブラウザではポインターロックが使えないことがあるため）
+
+## 設定（`src/ui/settings.js`、`settings.json`）
+- 設定項目はデータで定義し、メニューの設定画面はこの定義から自動で作る
+- 項目はキーをキーにしたオブジェクトで書く（配列だと上書きパックで1項目だけ変えられないため）。表示順は `order`
+  ```json
+  { "items": {
+      "renderDistance": { "order": 1, "label": "描画距離", "type": "range", "min": 2, "max": 16, "step": 1, "default": 6, "unit": "チャンク" },
+      "tickRate": { "order": 4, "label": "ティックレート", "type": "select", "options": [20, 30, 60], "default": 20, "unit": "回/秒" }
+  } }
+  ```
+- 種類: `range`（`min` / `max` / `step` / `default`）、`select`（`options` / `default`）、`toggle`（`default` が boolean）
+- 値は `coerceSetting` で定義に合うように直す（範囲に収め、刻みに合わせ、選択肢にない値は既定値）
+- 値は localStorage の `boxel-game.settings` に JSON で保存する。読めない・壊れている値は無視する
+- `Settings.subscribe(fn)` は登録時に現在の全ての値で1回ずつ呼ぶので、初期値の反映と変更時の反映を同じ関数で行える
+
+| キー | 反映先 |
+|---|---|
+| `renderDistance` | 描画距離とフォグ |
+| `fov` | カメラの視野角 |
+| `mouseSensitivity` | マウス感度（1.0 で 0.0025 ラジアン/ピクセル） |
+| `tickRate` | ティックレート |

@@ -18,5 +18,6 @@
     "entities/player.json"
   ],
   "worldgen": "worldgen.json",
-  "hotbar": "hotbar.json"
+  "hotbar": "hotbar.json",
+  "settings": "settings.json"
 }
