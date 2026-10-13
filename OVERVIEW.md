@@ -13,6 +13,8 @@ src/render/atlasLayout.js アトラスの配置と UV の計算（純粋関数�
 src/world/noise.js      シード付きノイズ、ハッシュ、乱数
 src/world/chunk.js      チャンクのデータ構造と座標変換
 src/world/terrain.js    地形の生成器
+src/render/mesher.js    面カリング付きのメッシュ生成（純粋関数）
+src/render/chunkRenderer.js メッシュデータから three.js のメッシュを作る
 tools/gen-textures.mjs  base パックのテクスチャ PNG を生成する
 src/core/packLoader.js  データパックの読み込みと深いマージ
 src/core/registry.js    定義の検証、数値IDとテーブルの構築
@@ -60,4 +62,15 @@ createTerrainGenerator(seed, worldgen, registry)
       fbm2D(heightNoise, x, z, height)
       hillNoise(x, z)
     chunk.set(x, y, z, id)              岩盤・石・土・草・砂・水
+```
+
+### チャンクのメッシュ生成
+```
+buildChunkMeshData(chunk, registry, tileUVs, getNeighbor)
+  blockAt(x, y, z)                      チャンク外は getNeighbor
+  isFaceHidden(registry, b, n)          隣で隠れる面は出さない
+  addFace(buf, ...)                     4頂点と2三角形を追加
+chunkRenderer.setChunkMesh(key, cx, cz, meshData)
+  createGeometry(data)                  opaque / cutout / liquid ごとに Mesh を作る
+chunkRenderer.removeChunk(key)          geometry.dispose()
 ```

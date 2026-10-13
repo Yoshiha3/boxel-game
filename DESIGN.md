@@ -97,3 +97,31 @@ liquid は自動的に `liquid: true` になる。
 - 縦の並び: y=0 は `bedrock`、地表は `top`（海面より下なら `underwater`）、その下 `fillerDepth` 段は `filler`（海面より下なら `underwater`）、それより下は `stone`
 - 地表より上で `seaLevel` 以下の空間は `liquid` で埋める
 - `layers` のブロックIDは registry で検証する
+
+## メッシュ生成と面カリング（`src/render/mesher.js`）
+- `buildChunkMeshData(chunk, registry, tileUVs, getNeighbor)` は、描画の種類ごと（`opaque` / `cutout` / `liquid`）に頂点データ（位置、法線、UV、頂点カラー、インデックス）を作る。three.js には依存しない
+- 走査はチャンク内で一番高い非空気ブロックの高さまで
+- 面カリングの規則（`isFaceHidden(registry, b, n)`。b = 面を出すブロック、n = その面の隣）
+  1. n が空気なら面を出す
+  2. n が opaque なら隠す
+  3. n が b と同じ種類で、b の `cullSameType` が true なら隠す
+  4. b と n がどちらも液体なら隠す
+  5. それ以外は面を出す（例: 石とガラス、石と水が接する面は、石の面を出す）
+- y = 0 の下面は出さない（ワールドの底は見えないため）。チャンク外の隣接ブロックは `getNeighbor` で取得する（チャンク境界の面も正しく隠れる）
+- 陰影: ライトは使わず、面ごとの明るさを頂点カラーで付ける（上 1.0、東西 0.8、南北 0.9、下 0.55）
+- 液体の水面: 液体ブロックの上が液体でも固体でもないとき、上端を `0.875` に下げる
+- 面の頂点の並び: 外側から見て左下・右下・右上・左上。三角形は (0,1,2)、(0,2,3)。上面のテクスチャは北（-Z）が上
+
+### カリングの効果（シード 1、7×7 チャンク）
+| | 面の数 |
+|---|---|
+| カリングなし（ブロック数 × 6） | 5,187,126 |
+| カリングあり | 52,783（約 1%） |
+
+## チャンクの描画（`src/render/chunkRenderer.js`）
+- チャンクごとに `THREE.Group` を作り、描画の種類ごとに1つずつメッシュを入れる（面がないレイヤーは作らない）
+- マテリアルは全チャンクで共有する `MeshBasicMaterial`（頂点カラーで陰影）
+  - opaque: 不透明
+  - cutout: `alphaTest: 0.5` で切り抜き（ソート不要）
+  - liquid: `transparent`、`opacity: 0.7`、`depthWrite: false`、両面描画。`renderOrder = 1` で不透明なものの後に描く
+- チャンクを取り除くときは、ジオメトリを `dispose` して GPU のメモリを解放する
