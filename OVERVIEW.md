@@ -89,8 +89,6 @@ main()
               sweepAxis()                         Y → X → Z
       player.interpolatedPos(clock.alpha)         カメラ位置
       worldRenderer.update(x, z, renderDistance)
-      interaction.update(camera)                  視線の先のブロックと選択枠
-        raycast(isTarget, origin, dir, REACH)
         world.update(cx, cz, R, maxLoads)         近い順に生成、遠いものを破棄
           world.loadChunk(cx, cz)
             generator.generate(chunk)
@@ -98,7 +96,10 @@ main()
         world.takeChunksToMesh(cx, cz, R, max)    隣が揃った dirty チャンク
         buildChunkMeshData(chunk, ..., world.neighborLookup(chunk))
         chunkRenderer.setChunkMesh(...)
+      interaction.update(camera)                  視線の先のブロックと選択枠
+        raycast(isTarget, origin, dir, REACH)
       renderer.render(scene, camera)
+      hud.setDebugLines(...)                      F3 表示中のみ
 ```
 
 ### データの読み込み
