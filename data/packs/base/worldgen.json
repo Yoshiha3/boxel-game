@@ -20,5 +20,14 @@
     "bedrock": "bedrock",
     "underwater": "sand",
     "liquid": "water"
+  },
+  "river": {
+    "frequency": 0.0035,
+    "bankWidth": 0.07,
+    "depth": 4
+  },
+  "beach": {
+    "block": "sand",
+    "maxHeightAboveSea": 1
   }
 }

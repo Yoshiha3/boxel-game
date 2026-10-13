@@ -90,13 +90,20 @@ liquid は自動的に `liquid: true` になる。
   "height": { "base": 66, "amplitude": 14, "octaves": 4, "frequency": 0.006, "persistence": 0.5, "lacunarity": 2 },
   "hills": { "amplitude": 22, "frequency": 0.0025 },
   "layers": { "top": "grass", "filler": "dirt", "fillerDepth": 3, "stone": "stone",
-              "bedrock": "bedrock", "underwater": "sand", "liquid": "water" }
+              "bedrock": "bedrock", "underwater": "sand", "liquid": "water" },
+  "river": { "frequency": 0.0035, "bankWidth": 0.07, "depth": 4 },
+  "beach": { "block": "sand", "maxHeightAboveSea": 1 }
 }
 ```
-- 地表の高さ = `height.base + fbm(height) × height.amplitude + max(0, hillNoise) × hills.amplitude`（1〜126 に収める）
-- 縦の並び: y=0 は `bedrock`、地表は `top`（海面より下なら `underwater`）、その下 `fillerDepth` 段は `filler`（海面より下なら `underwater`）、それより下は `stone`
-- 地表より上で `seaLevel` 以下の空間は `liquid` で埋める
-- `layers` のブロックIDは registry で検証する
+- 地表の高さ（`heightAt`）
+  1. `height.base + fbm(height) × height.amplitude + max(0, hillNoise) × hills.amplitude`
+  2. 川: 川ノイズ `r`（シード + 2）の絶対値が `bankWidth` 未満の帯では、地表を川底 `seaLevel - depth` へ向けて下げる。`h = bed + (h - bed) × smoothstep(|r| / bankWidth)`。中心ほど深く、岸に向かってなめらかに元の高さへ戻る
+  3. 1〜126 に収めて整数にする
+- 縦の並び: y=0 は `bedrock`、地表は `top`、その下 `fillerDepth` 段は `filler`、それより下は `stone`
+  - 地表が海面より下なら、地表と `filler` は `underwater`（砂）
+  - 地表が海面から `beach.maxHeightAboveSea` 以内なら、地表と `filler` は `beach.block`（砂浜）
+- 海と川: 地表より上で `seaLevel` 以下の空間は `liquid`（水）で埋める。川は地表を海面より下げるだけで、水張りは海と同じ処理
+- ブロックIDの参照（`layers.*`、`beach.block`）は registry で検証する
 
 ## メッシュ生成と面カリング（`src/render/mesher.js`）
 - `buildChunkMeshData(chunk, registry, tileUVs, getNeighbor)` は、描画の種類ごと（`opaque` / `cutout` / `liquid`）に頂点データ（位置、法線、UV、頂点カラー、インデックス）を作る。three.js には依存しない

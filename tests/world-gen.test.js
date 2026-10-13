@@ -78,3 +78,43 @@ test('findSpawn returns a dry surface position', async () => {
   assert.ok(gen.heightAt(Math.floor(x), Math.floor(z)) >= gen.seaLevel);
   assert.equal(y, gen.heightAt(Math.floor(x), Math.floor(z)) + 1);
 });
+
+test('river centers are below sea level', () => {
+  const gen = createTerrainGenerator(123, defs.worldgen, registry);
+  // 地形と同じシードで川のノイズを作り、ノイズが 0 に近い（川の中心）場所を調べる
+  const river = createNoise2D(123 + 2);
+  const f = defs.worldgen.river.frequency;
+  let riverCells = 0;
+  for (let x = -600; x < 600; x += 3) {
+    for (let z = -600; z < 600; z += 3) {
+      if (Math.abs(river(x * f, z * f)) < 0.01) {
+        riverCells++;
+        assert.ok(gen.heightAt(x, z) < gen.seaLevel, `dry river at ${x},${z}`);
+      }
+    }
+  }
+  assert.ok(riverCells > 100, `found ${riverCells} river cells`);
+});
+
+test('shores are sand and low ground is flooded up to sea level', () => {
+  const gen = createTerrainGenerator(123, defs.worldgen, registry);
+  const sand = registry.blockId('sand'), water = registry.blockId('water');
+  let shoreCells = 0;
+  for (let cx = -4; cx <= 4; cx++) {
+    for (let cz = -4; cz <= 4; cz++) {
+      const ch = new Chunk(cx, cz);
+      gen.generate(ch);
+      for (let x = 0; x < 16; x++) {
+        for (let z = 0; z < 16; z++) {
+          const h = gen.heightAt(cx * 16 + x, cz * 16 + z);
+          if (h >= gen.seaLevel && h <= gen.seaLevel + defs.worldgen.beach.maxHeightAboveSea) {
+            assert.equal(ch.get(x, h, z), sand);
+            shoreCells++;
+          }
+          if (h < gen.seaLevel) assert.equal(ch.get(x, gen.seaLevel, z), water);
+        }
+      }
+    }
+  }
+  assert.ok(shoreCells > 0, 'some shore exists in the sample area');
+});

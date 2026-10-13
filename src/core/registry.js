@@ -6,7 +6,7 @@
  * - 参照の整合性（存在しないブロックID・コンポーネント名など）を検証する
  */
 import { AIR, FACE_COUNT, MAX_BLOCK_TYPES } from './constants.js';
-import { LAYER_BLOCK_KEYS } from '../world/terrain.js';
+import { worldgenBlockRefs } from '../world/terrain.js';
 import { validateEntityDef } from '../entities/components/index.js';
 import { validateSettings } from '../ui/settings.js';
 
@@ -95,9 +95,8 @@ function validateHotbar(hotbar, blocks, errors) {
 function validateWorldgen(worldgen, blocks, errors) {
   if (!worldgen || Object.keys(worldgen).length === 0) return;
   if (typeof worldgen.seaLevel !== 'number') errors.push('worldgen: "seaLevel" must be a number');
-  for (const key of LAYER_BLOCK_KEYS) {
-    const id = worldgen.layers?.[key];
-    if (!(id in blocks)) errors.push(`worldgen.layers.${key}: unknown block "${id}"`);
+  for (const [where, id] of worldgenBlockRefs(worldgen)) {
+    if (!(id in blocks)) errors.push(`worldgen.${where}: unknown block "${id}"`);
   }
 }
 
