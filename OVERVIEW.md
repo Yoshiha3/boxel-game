@@ -22,7 +22,7 @@ src/core/tickClock.js   固定ステップのティック
 src/physics/aabb.js     AABB とボクセルの衝突判定
 src/entities/entity.js  エンティティ
 src/entities/entityManager.js エンティティの更新と移動
-src/entities/components/ コンポーネント（playerControl, flight, walk, gravity, collision）
+src/entities/components/ コンポーネント（playerControl, waterPhysics, flight, walk, gravity, collision）
 src/player/input.js     キーボード・マウス・ポインターロック
 src/player/doubleTap.js キーの2回押しの検出
 src/ui/settings.js      設定値の検証・保存・通知
@@ -84,7 +84,8 @@ main()
       input.getControl()                          キー状態 + 溜めた飛行切り替え（consumeToggleFlight）
       entities.update(dt, input)                  ティックごと
         updateEntity(e, ctx)
-          COMPONENTS[name].update(e, params, ctx) order 順（playerControl → flight → walk → gravity）
+          COMPONENTS[name].update(e, params, ctx) order 順（playerControl → waterPhysics → flight → walk → gravity）
+            liquidAt(...)                         waterPhysics: 液体の判定、沈む・浮上・跳ねる・壁登り
           integrate(e, dt, isSolid)
             moveWithCollision(isSolid, pos, size, delta)
               sweepAxis()                         Y → X → Z

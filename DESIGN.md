@@ -186,12 +186,30 @@ liquid は自動的に `liquid: true` になる。
 | 名前 | order | パラメータ（既定値） | 内容 |
 |---|---|---|---|
 | `playerControl` | 0 | なし | キーボード・マウスの入力を `control` と向きに写す |
+| `waterPhysics` | 10 | 下の表 | 液体の中での動き。飛行中は無効 |
 | `walk` | 30 | `speed` 4.3、`sprintSpeed` 5.6、`jumpSpeed` 8.4、`groundAccel` 20、`airAccel` 4 | `control` に従って歩く。水平速度を目標速度へ `1 - exp(-accel·dt)` の割合で近づける。地上で `jump` なら上向きに `jumpSpeed` |
 | `gravity` | 40 | `acceleration` 28、`terminalVelocity` 60 | 下向きの加速度。飛行中は無効 |
 | `flight` | 20 | `speed` 10.9、`sprintSpeed` 21.6、`verticalSpeed` 7.5、`accel` 10 | `control.toggleFlight` で飛行を切り替える。飛行中は重力なし、`jump` で上昇・`descend` で下降。速度は目標速度へ指数的に近づける。着地した状態で `descend` すると飛行をやめる |
 | `collision` | 100 | なし | ブロックとの当たり判定を有効にする |
 
 ジャンプの高さは `jumpSpeed² / (2·acceleration)` = 約 1.26 ブロック（1 ブロックの段差を越えられる）。
+
+### waterPhysics（液体の中での動き）
+| パラメータ | 既定値 | 説明 |
+|---|---|---|
+| `lowerBodyHeight` | 0.4 | 足元からこの高さの点が液体の中なら `inLiquid` |
+| `moveScale` | 0.5 | 水平の移動速度の倍率 |
+| `gravity` | 8 | 液体の中の重力加速度（通常は 28。`gravity` コンポーネントは液体の中では働かない） |
+| `maxSinkSpeed` | 2 | 沈む速さの上限（終端速度） |
+| `drag` | 3 | 縦の速度の減衰（毎ティック `exp(-drag·dt)` 倍） |
+| `swimUpSpeed` | 3 | 水中で Space を押しているときの浮上の速さ（この間は重力を打ち消す） |
+| `surfaceJumpSpeed` | 4.2 | 目が水面より上で Space を押したときの上向きの速さ。水面で小さく跳ね、上下に揺れる |
+| `climbSpeed` | 4.6 | 壁に当たりながら Space を押したときに登る速さ |
+| `climbHeight` | 1.3 | 足が最後に液体に触れた高さから、壁を登り続けられる高さ |
+
+- 判定: `inLiquid`（下半身が液体の中）、`eyeInLiquid`（目が液体の中）。水面のブロックは高さ 0.875 までが液体（`liquidAt`）
+- 岸に上がる: 水中で岸の壁に向かって進みながら Space を押すと、壁を登るように上がる。足が液体を出たあとも、最後に液体に触れた高さ + `climbHeight` までは登り続けるので、水面より 1 ブロック高い岸（上面が水面 + 1.125）にも上がれる。地面に立つと登りの上限は解除される
+- 落下して水に入ると、終端速度が `maxSinkSpeed` になるので、すぐにゆっくり沈む動きになる
 
 ## 当たり判定（`src/physics/aabb.js`）
 - `moveWithCollision(isSolid, pos, size, delta)`: 箱を1軸ずつ動かし、固体ブロックの手前で止める。結果は各軸で当たったかと、下向きに当たったか（着地）
