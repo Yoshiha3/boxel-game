@@ -70,3 +70,30 @@ liquid は自動的に `liquid: true` になる。
 - 起動時に `buildTextureAtlas(registry)` が `registry.textures` の順に画像を canvas に並べ、1枚のアトラスにする。フィルタは `NearestFilter`、ミップマップなし
 - アトラスの配置（`src/render/atlasLayout.js`）: 列数 = ceil(√n)、行数 = ceil(n / 列数)。タイル t は (t % 列数, floor(t / 列数)) のセルに置く。UV の表 `tileUVs` は `t * 4 → [u0, v0, u1, v1]`（flipY のため画像の上端が v=1）
 - 透過: 葉とガラスはアルファ 0 のピクセルを持ち、`alphaTest` で切り抜く
+
+## チャンク（`src/world/chunk.js`）
+- 1チャンクは 16 (X) × 128 (Y) × 16 (Z) のブロックの柱。中身は `Uint8Array` に数値IDで持つ
+- 添字は `x + z * 16 + y * 256`
+- チャンク座標は `floor(ワールド座標 / 16)`、ローカル座標は 0〜15 に正規化した余り
+- 高さの範囲外（y < 0 または y ≥ 128）の取得は空気を返し、設定は無視する
+
+## ノイズ（`src/world/noise.js`）
+- `createNoise2D(seed)`: シード付きの 2D シンプレックスノイズ（およそ -1〜1）
+- `fbm2D(noise, x, y, {octaves, frequency, persistence, lacunarity})`: オクターブを重ねたノイズ（振幅の合計で正規化）
+- `hash3(seed, x, y, z)`: 整数座標の決定的なハッシュ（構造物の配置などに使う）
+- `createRandom(seed)`: シード付きの擬似乱数（mulberry32）
+
+## 地形生成（`src/world/terrain.js`、`worldgen.json`）
+```json
+{
+  "seaLevel": 62,
+  "height": { "base": 66, "amplitude": 14, "octaves": 4, "frequency": 0.006, "persistence": 0.5, "lacunarity": 2 },
+  "hills": { "amplitude": 22, "frequency": 0.0025 },
+  "layers": { "top": "grass", "filler": "dirt", "fillerDepth": 3, "stone": "stone",
+              "bedrock": "bedrock", "underwater": "sand", "liquid": "water" }
+}
+```
+- 地表の高さ = `height.base + fbm(height) × height.amplitude + max(0, hillNoise) × hills.amplitude`（1〜126 に収める）
+- 縦の並び: y=0 は `bedrock`、地表は `top`（海面より下なら `underwater`）、その下 `fillerDepth` 段は `filler`（海面より下なら `underwater`）、それより下は `stone`
+- 地表より上で `seaLevel` 以下の空間は `liquid` で埋める
+- `layers` のブロックIDは registry で検証する

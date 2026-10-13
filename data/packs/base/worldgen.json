@@ -1,0 +1,24 @@
+{
+  "seaLevel": 62,
+  "height": {
+    "base": 66,
+    "amplitude": 14,
+    "octaves": 4,
+    "frequency": 0.006,
+    "persistence": 0.5,
+    "lacunarity": 2
+  },
+  "hills": {
+    "amplitude": 22,
+    "frequency": 0.0025
+  },
+  "layers": {
+    "top": "grass",
+    "filler": "dirt",
+    "fillerDepth": 3,
+    "stone": "stone",
+    "bedrock": "bedrock",
+    "underwater": "sand",
+    "liquid": "water"
+  }
+}

@@ -6,6 +6,7 @@
  * - 参照の整合性（存在しないブロックID・コンポーネント名など）を検証する
  */
 import { AIR, FACE_COUNT, MAX_BLOCK_TYPES } from './constants.js';
+import { LAYER_BLOCK_KEYS } from '../world/terrain.js';
 
 /** 描画の種類の番号 */
 export const RENDER = Object.freeze({ NONE: 0, CUBE: 1, CUTOUT: 2, LIQUID: 3 });
@@ -84,6 +85,21 @@ function validateHotbar(hotbar, blocks, errors) {
 }
 
 /**
+ * 地形生成の定義を検証する。
+ * @param {any} worldgen
+ * @param {Object<string, any>} blocks
+ * @param {string[]} errors
+ */
+function validateWorldgen(worldgen, blocks, errors) {
+  if (!worldgen || Object.keys(worldgen).length === 0) return;
+  if (typeof worldgen.seaLevel !== 'number') errors.push('worldgen: "seaLevel" must be a number');
+  for (const key of LAYER_BLOCK_KEYS) {
+    const id = worldgen.layers?.[key];
+    if (!(id in blocks)) errors.push(`worldgen.layers.${key}: unknown block "${id}"`);
+  }
+}
+
+/**
  * 定義セットからレジストリを作る。問題があればまとめて例外を投げる。
  * @param {ReturnType<import('./packLoader.js').emptyDefinitions>} defs
  * @returns {Registry}
@@ -93,6 +109,7 @@ export function buildRegistry(defs) {
   const errors = [];
   validateBlocks(defs.blocks, errors);
   validateHotbar(defs.hotbar, defs.blocks, errors);
+  validateWorldgen(defs.worldgen, defs.blocks, errors);
   if (errors.length) throw new Error(`Invalid data:\n- ${errors.join('\n- ')}`);
   return new Registry(defs);
 }
