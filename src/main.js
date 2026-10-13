@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { loadRegistry } from './core/dataLoader.js';
 import { buildTextureAtlas } from './render/atlas.js';
 import { CHUNK_SIZE } from './core/constants.js';
-import { createTerrainGenerator } from './world/terrain.js';
+import { createWorldGenerator } from './world/worldGenerator.js';
 import { World } from './world/world.js';
 import { ChunkRenderer, createBlockMaterials } from './render/chunkRenderer.js';
 import { WorldRenderer } from './render/worldRenderer.js';
@@ -77,8 +77,8 @@ async function main() {
   const atlas = await buildTextureAtlas(registry);
   const chunkRenderer = new ChunkRenderer(scene, createBlockMaterials(atlas.texture));
   const seed = readSeed();
-  const terrain = createTerrainGenerator(seed, registry.defs.worldgen, registry);
-  const world = new World(registry, terrain);
+  const generator = createWorldGenerator(seed, registry.defs.worldgen, registry);
+  const world = new World(registry, generator);
   const worldRenderer = new WorldRenderer(world, chunkRenderer, atlas.tileUVs);
   let renderDistance = 6;
   const skyColor = new THREE.Color(0x87ceeb);
@@ -107,7 +107,7 @@ async function main() {
   };
 
   const entities = new EntityManager(world, registry);
-  const player = entities.spawn('player', findSpawn(terrain));
+  const player = entities.spawn('player', findSpawn(generator));
   const input = new Input(renderer.domElement);
   const clock = new TickClock(20);
   camera.rotation.order = 'YXZ';

@@ -1,0 +1,10 @@
+{
+  "id": "oak_tree",
+  "name": "Oak tree",
+  "type": "tree",
+  "trunk": "log",
+  "leaves": "leaves",
+  "soil": "dirt",
+  "height": [4, 6],
+  "leafRadius": 2
+}

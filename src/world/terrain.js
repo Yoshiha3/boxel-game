@@ -82,6 +82,28 @@ export function createTerrainGenerator(seed, worldgen, registry) {
   }
 
   /**
+   * 地表の高さから、地表とその下（filler）のブロックを決める。
+   * 海面より下は水中のブロック、海面付近は砂浜にする。
+   * @param {number} top 地表の高さ
+   * @returns {{surface: number, filler: number}}
+   */
+  function surfaceLayers(top) {
+    if (top < seaLevel) return { surface: ids.underwater, filler: ids.underwater };
+    if (top <= beachTop) return { surface: beachId, filler: beachId };
+    return { surface: ids.top, filler: ids.filler };
+  }
+
+  /**
+   * ワールド座標 (x, z) の地表のブロック（数値ID）を返す。構造物の配置条件に使う。
+   * @param {number} x
+   * @param {number} z
+   * @returns {number}
+   */
+  function surfaceBlockAt(x, z) {
+    return surfaceLayers(heightAt(x, z)).surface;
+  }
+
+  /**
    * チャンクを地形で埋める（既存の内容は上書きする）。
    * @param {import('./chunk.js').Chunk} chunk
    */
@@ -91,10 +113,7 @@ export function createTerrainGenerator(seed, worldgen, registry) {
     for (let x = 0; x < CHUNK_SIZE; x++) {
       for (let z = 0; z < CHUNK_SIZE; z++) {
         const top = heightAt(ox + x, oz + z);
-        const underwater = top < seaLevel;
-        // 海面付近の地表は砂浜にする
-        const surface = underwater ? ids.underwater : top <= beachTop ? beachId : ids.top;
-        const filler = underwater ? ids.underwater : top <= beachTop ? beachId : ids.filler;
+        const { surface, filler } = surfaceLayers(top);
         for (let y = 0; y <= Math.max(top, seaLevel); y++) {
           let id;
           if (y === 0) id = ids.bedrock;
@@ -108,5 +127,5 @@ export function createTerrainGenerator(seed, worldgen, registry) {
     }
   }
 
-  return { heightAt, baseHeightAt, generate, seaLevel };
+  return { heightAt, baseHeightAt, surfaceBlockAt, generate, seaLevel };
 }

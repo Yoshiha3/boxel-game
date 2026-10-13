@@ -32,5 +32,20 @@
   "beach": {
     "block": "sand",
     "maxHeightAboveSea": 1
-  }
+  },
+  "structures": [
+    {
+      "structure": "oak_tree",
+      "attemptsPerChunk": 10,
+      "chance": 0.5,
+      "groundBlocks": [
+        "grass"
+      ],
+      "density": {
+        "frequency": 0.01,
+        "min": 0.0,
+        "max": 1.0
+      }
+    }
+  ]
 }

@@ -17,6 +17,9 @@
   "entities": [
     "entities/player.json"
   ],
+  "structures": [
+    "structures/oak_tree.json"
+  ],
   "worldgen": "worldgen.json",
   "hotbar": "hotbar.json",
   "settings": "settings.json"

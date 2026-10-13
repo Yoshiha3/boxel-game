@@ -13,6 +13,9 @@ src/render/atlasLayout.js アトラスの配置と UV の計算（純粋関数�
 src/world/noise.js      シード付きノイズ、ハッシュ、乱数
 src/world/chunk.js      チャンクのデータ構造と座標変換
 src/world/terrain.js    地形の生成器
+src/world/worldGenerator.js 地形と構造物をまとめた生成器
+src/world/structurePlacer.js 構造物の配置（チャンクをまたぐ）
+src/world/structures/   構造物ジェネレータ（tree, template）
 src/render/mesher.js    面カリング付きのメッシュ生成（純粋関数）
 src/render/chunkRenderer.js メッシュデータから three.js のメッシュを作る
 src/world/world.js      読み込み済みチャンクの管理、ブロックの取得・設定、読み込みと破棄
@@ -36,7 +39,7 @@ tools/gen-textures.mjs  base パックのテクスチャ PNG を生成する
 src/core/packLoader.js  データパックの読み込みと深いマージ
 src/core/registry.js    定義の検証、数値IDとテーブルの構築
 data/packs.json         有効なパックの一覧
-data/packs/base/        基本のデータパック（ブロック定義、テクスチャ、ホットバー）
+data/packs/base/        基本のデータパック（ブロック、エンティティ、構造物、地形、テクスチャ、ホットバー、設定）
 tests/                  node:test のテスト
 ```
 
@@ -52,11 +55,13 @@ main()
     loadImage(path)
     buildTileUVs(count)                 タイル番号 → UV の表
   readSeed()                            URL の ?seed=
-  createTerrainGenerator(seed, worldgen, registry)
-  new World(registry, terrain)
+  createWorldGenerator(seed, worldgen, registry)
+    createTerrainGenerator(...)
+    createStructurePlacer(...)
+  new World(registry, generator)
   new WorldRenderer(world, chunkRenderer, tileUVs)
   new EntityManager(world, registry)
-  entities.spawn('player', findSpawn(terrain))
+  entities.spawn('player', findSpawn(generator))
     resolveComponents(def)              既定値を補う
     orderedComponentNames(components)   実行順
   new Input(canvas)
@@ -95,7 +100,7 @@ main()
       worldRenderer.update(x, z, renderDistance)
         world.update(cx, cz, R, maxLoads)         近い順に生成、遠いものを破棄
           world.loadChunk(cx, cz)
-            generator.generate(chunk)
+            generator.generate(chunk)               地形 → 構造物（下の「地形の生成」「構造物の配置」）
         chunkRenderer.removeChunk(key)            破棄・範囲外のメッシュを外す
         world.takeChunksToMesh(cx, cz, R, max)    隣が揃った dirty チャンク
         buildChunkMeshData(chunk, ..., world.neighborLookup(chunk))
@@ -143,4 +148,16 @@ buildChunkMeshData(chunk, registry, tileUVs, getNeighbor)
 chunkRenderer.setChunkMesh(key, cx, cz, meshData)
   createGeometry(data)                  opaque / cutout / liquid ごとに Mesh を作る
 chunkRenderer.removeChunk(key)          geometry.dispose()
+```
+
+### 構造物の配置
+```
+createStructurePlacer(seed, worldgen, registry, terrain)
+  resolveStructure(def)                 ジェネレータの既定値を補う
+place(chunk)                            地形の生成後に呼ぶ
+  placementsInChunk(ncx, ncz)           周囲 reach チャンクの起点（決定的な乱数）
+    terrain.surfaceBlockAt(x, z)        置いてよい地表か
+    terrain.heightAt(x, z)
+    gen.build(def, rand, blockId)       tree / template がブロックの一覧を返す
+  canPlaceStructureBlock(...)           チャンク内に入るブロックだけ、規則に従って書き込む
 ```

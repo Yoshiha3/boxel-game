@@ -72,6 +72,10 @@ liquid は自動的に `liquid: true` になる。
 - アトラスの配置（`src/render/atlasLayout.js`）: 列数 = ceil(√n)、行数 = ceil(n / 列数)。タイル t は (t % 列数, floor(t / 列数)) のセルに置く。UV の表 `tileUVs` は `t * 4 → [u0, v0, u1, v1]`（flipY のため画像の上端が v=1）
 - 透過: 葉とガラスはアルファ 0 のピクセルを持ち、`alphaTest` で切り抜く
 
+## ワールドの生成器（`src/world/worldGenerator.js`）
+- `createWorldGenerator(seed, worldgen, registry)` は、地形の生成（`terrain.generate`）と構造物の配置（`structures.place`）を順に行う生成器を返す。地形の関数（`heightAt` など）もそのまま公開する
+- 生成のコストの目安（ブラウザで計測）: 地形 + 木で 1 チャンクあたり約 0.2ms、メッシュ生成は約 1ms
+
 ## チャンク（`src/world/chunk.js`）
 - 1チャンクは 16 (X) × 128 (Y) × 16 (Z) のブロックの柱。中身は `Uint8Array` に数値IDで持つ
 - 添字は `x + z * 16 + y * 256`
@@ -117,6 +121,40 @@ liquid は自動的に `liquid: true` になる。
   - 地表が海面から `beach.maxHeightAboveSea` 以内なら、地表と `filler` は `beach.block`（砂浜）
 - 海と川: 地表より上で `seaLevel` 以下の空間は `liquid`（水）で埋める。川は地表を海面より下げるだけで、水張りは海と同じ処理
 - ブロックIDの参照（`layers.*`、`beach.block`）と、`river` の数値パラメータ（`width < bankWidth`、`fadeHeight > 0`）は registry で検証する
+
+## 構造物（`src/world/structurePlacer.js`、`src/world/structures/`）
+### チャンクをまたぐ配置
+- 構造物の起点は、`hash3(seed, cx, 7919 + ルール番号, cz)` を種にした乱数で、チャンクごとに決める（`placementsInChunk(cx, cz)`）。1回の試行で x・z・判定用の3つの乱数を必ず引くので、条件で弾かれても後の試行に影響しない
+- チャンク C を生成するときは、C を中心に `reach` チャンク（構造物の水平の広がりの最大値 ÷ 16 の切り上げ。木なら 1）以内の全チャンクの起点を計算し、C の範囲に入るブロックだけを書き込む
+- 起点の判定は、チャンクのデータではなく地形の関数（`heightAt` / `surfaceBlockAt`）で行う。隣のチャンクが未生成でも同じ結果になるので、生成順に依存しない（テストで確認）
+- 構造物ごとの形の乱数は `hash3(seed, x, y, z)`（起点の座標）を種にする
+- 書き込みの規則（`canPlaceStructureBlock`）: 空気には置く。切り抜き描画のブロック（葉）は不透明なブロック（幹）で上書きする。`force` のブロック（根元の土）は常に置く。それ以外（地形、別の木の幹、水）は上書きしない
+- 構造物はチャンクの生成時に書き込まれ、その後のプレイヤーの編集差分はその上に当て直される
+
+### 配置ルール（`worldgen.json` の `structures`）
+```json
+"structures": [
+  { "structure": "oak_tree", "attemptsPerChunk": 10, "chance": 0.5, "groundBlocks": ["grass"],
+    "density": { "frequency": 0.01, "min": 0.0, "max": 1.0 } }
+]
+```
+| 項目 | 説明 |
+|---|---|
+| `structure` | 構造物の ID |
+| `attemptsPerChunk` | チャンクあたりの試行回数 |
+| `chance` | 1回の試行で置く確率 |
+| `groundBlocks` | 置いてよい地表のブロック（省略時は制限なし） |
+| `density` | 省略可。ノイズ（シード + 100 + ルール番号）で確率に `min〜max` の倍率を掛ける。森と草原のような濃淡を作る |
+
+### 構造物の定義（`structures/*.json`）
+`type` でジェネレータを選び、残りの項目はジェネレータの既定値とマージされる。未知の項目や型の違いは検証エラー。
+
+| type | 項目（既定値） | 内容 |
+|---|---|---|
+| `tree` | `trunk` "log"、`leaves` "leaves"、`soil` "dirt"、`height` [4, 6]、`leafRadius` 2 | 幹の高さを範囲から乱数で決め、上部に葉を付ける（下2段は半径 `leafRadius`、上2段は半径 `leafRadius - 1`、角は乱数で欠く）。根元の地面を `soil` に置き換える |
+| `template` | `blocks` [] | `[dx, dy, dz, "ブロックID"]` の並びをそのまま置く |
+
+座標は起点（地表の1つ上）からの相対座標。新しい形の構造物は、`src/world/structures/` にジェネレータを追加し、`index.js` の一覧に登録する。
 
 ## メッシュ生成と面カリング（`src/render/mesher.js`）
 - `buildChunkMeshData(chunk, registry, tileUVs, getNeighbor)` は、描画の種類ごと（`opaque` / `cutout` / `liquid`）に頂点データ（位置、法線、UV、頂点カラー、インデックス）を作る。three.js には依存しない
