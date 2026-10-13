@@ -27,6 +27,7 @@ src/player/input.js     キーボード・マウス・ポインターロック
 src/player/doubleTap.js キーの2回押しの検出
 src/ui/settings.js      設定値の検証・保存・通知
 src/ui/menu.js          メニュー画面と設定画面
+src/physics/liquid.js   液体の判定（水面の高さを考慮）
 src/player/raycast.js   ボクセルのレイキャスト（純粋関数）
 src/player/blockActions.js ブロックの破壊・設置のルール（純粋関数）
 src/player/interaction.js 選択枠の表示と、マウスによる破壊・設置
@@ -88,6 +89,8 @@ main()
             moveWithCollision(isSolid, pos, size, delta)
               sweepAxis()                         Y → X → Z
       player.interpolatedPos(clock.alpha)         カメラ位置
+      updateViewFog(camera.position)              水中なら液体の fog に切り替える
+        liquidAt(getBlock, registry.liquid, x, y, z)
       worldRenderer.update(x, z, renderDistance)
         world.update(cx, cz, R, maxLoads)         近い順に生成、遠いものを破棄
           world.loadChunk(cx, cz)

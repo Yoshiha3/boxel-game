@@ -67,6 +67,12 @@ function validateBlocks(blocks, errors) {
     if (b.render !== undefined && !(b.render in RENDER_BY_NAME)) {
       errors.push(`block "${id}": unknown render "${b.render}"`);
     }
+    if (b.fog !== undefined) {
+      const f = b.fog;
+      if (typeof f.color !== 'string' || typeof f.near !== 'number' || typeof f.far !== 'number') {
+        errors.push(`block "${id}": fog needs string "color" and numeric "near" / "far"`);
+      }
+    }
     const paths = faceTexturePaths(b.textures);
     paths.forEach((p, face) => {
       if (typeof p !== 'string') errors.push(`block "${id}": missing texture for face ${face}`);

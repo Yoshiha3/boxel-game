@@ -62,4 +62,5 @@ test('validation reports missing textures, bad render and unknown hotbar blocks'
   assert.throws(() => buildRegistry(defsWith({ x: { id: 'x', render: 'blob', textures: { all: 'a.png' } } })), /unknown render/);
   assert.throws(() => buildRegistry(defsWith({}, { hotbar: { slots: ['nope'] } })), /hotbar: unknown block "nope"/);
   assert.throws(() => buildRegistry(defsWith({ air: { id: 'air', textures: { all: 'a.png' } } })), /reserved/);
+  assert.throws(() => buildRegistry(defsWith({ w: { id: 'w', render: 'liquid', fog: { color: 1 }, textures: { all: 'a.png' } } })), /fog needs/);
 });

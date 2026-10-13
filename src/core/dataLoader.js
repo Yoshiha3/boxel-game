@@ -10,7 +10,8 @@ import { buildRegistry } from './registry.js';
  * @returns {Promise<any>}
  */
 export async function fetchJson(path) {
-  const res = await fetch(path);
+  // データを編集したときに古いキャッシュを使わないよう、毎回サーバーに確認する（変更がなければ 304）
+  const res = await fetch(path, { cache: 'no-cache' });
   if (!res.ok) throw new Error(`failed to load ${path}: ${res.status}`);
   return res.json();
 }

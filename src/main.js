@@ -17,6 +17,7 @@ import { Settings } from './ui/settings.js';
 import { Menu } from './ui/menu.js';
 import { Hud } from './ui/hud.js';
 import { BlockInteraction } from './player/interaction.js';
+import { liquidAt } from './physics/liquid.js';
 
 /** マウス感度 1.0 のときの回転量（ラジアン/ピクセル） */
 const BASE_SENSITIVITY = 0.0025;
@@ -71,7 +72,6 @@ async function main() {
 
   const renderer = createRenderer(container);
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87ceeb);
   const camera = new THREE.PerspectiveCamera(70, container.clientWidth / container.clientHeight, 0.05, 1000);
 
   const atlas = await buildTextureAtlas(registry);
@@ -81,10 +81,29 @@ async function main() {
   const world = new World(registry, terrain);
   const worldRenderer = new WorldRenderer(world, chunkRenderer, atlas.tileUVs);
   let renderDistance = 6;
+  const skyColor = new THREE.Color(0x87ceeb);
+  const airFog = new THREE.Fog(skyColor, 0, 1);
+  scene.fog = airFog;
   /** 描画距離に合わせてフォグを設定する（チャンクの端を隠す） */
   const updateFog = () => {
     const far = renderDistance * CHUNK_SIZE;
-    scene.fog = new THREE.Fog(scene.background, far * 0.6, far);
+    airFog.near = far * 0.6;
+    airFog.far = far;
+  };
+  /** 液体ごとの水中フォグ（ブロック定義の fog から作る） */
+  const liquidFogs = new Map();
+  registry.blocks.forEach((b, id) => {
+    if (b.liquid && b.fog) liquidFogs.set(id, new THREE.Fog(new THREE.Color(b.fog.color), b.fog.near, b.fog.far));
+  });
+  /**
+   * 視点が液体の中なら、その液体のフォグと背景色にする。
+   * @param {THREE.Vector3} eye
+   */
+  const updateViewFog = (eye) => {
+    const id = liquidAt((x, y, z) => world.getBlock(x, y, z), registry.liquid, eye.x, eye.y, eye.z);
+    const fog = liquidFogs.get(id) ?? airFog;
+    scene.fog = fog;
+    scene.background = fog.color;
   };
 
   const entities = new EntityManager(world, registry);
@@ -170,6 +189,7 @@ async function main() {
     const [px, py, pz] = player.interpolatedPos(clock.alpha);
     camera.position.set(px, py + player.eyeHeight, pz);
     camera.rotation.set(input.pitch, input.yaw, 0);
+    updateViewFog(camera.position);
     worldRenderer.update(px, pz, renderDistance);
     interaction.update(camera);
     renderer.render(scene, camera);
