@@ -1,0 +1,13 @@
+{
+  "name": "boxel-game",
+  "version": "0.1.0",
+  "description": "A voxel sandbox game built with three.js (no build step, data-driven)",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test tests/",
+    "serve": "python3 -m http.server 8000",
+    "textures": "node tools/gen-textures.mjs"
+  }
+}
