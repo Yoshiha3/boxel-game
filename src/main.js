@@ -15,6 +15,8 @@ import { TickClock } from './core/tickClock.js';
 import { Input } from './player/input.js';
 import { Settings } from './ui/settings.js';
 import { Menu } from './ui/menu.js';
+import { Hud } from './ui/hud.js';
+import { BlockInteraction } from './player/interaction.js';
 
 /** マウス感度 1.0 のときの回転量（ラジアン/ピクセル） */
 const BASE_SENSITIVITY = 0.0025;
@@ -117,7 +119,11 @@ async function main() {
     input.requestLock().catch(() => menu.setMessage('ブラウザに拒否されました。もう一度押してください'));
   });
   menu.setReady('開始');
+  const hud = new Hud(registry, atlas.canvas, (registry.defs.hotbar.slots ?? []).map((id) => registry.blockId(id)));
+  const interaction = new BlockInteraction(scene, world, entities);
+
   input.lockListeners.push((locked) => {
+    hud.setVisible(locked);
     if (locked) {
       menu.hide();
     } else {
@@ -125,6 +131,21 @@ async function main() {
       menu.show();
     }
   });
+  input.mouseDownListeners.push((button) => {
+    if (button === 0) interaction.breakTarget();
+    else if (button === 2) interaction.placeAtTarget(hud.selectedBlock);
+  });
+  input.wheelListeners.push((delta) => hud.select(hud.selected + delta));
+  input.keyDownListeners.push((code, e) => {
+    const digit = /^Digit([1-9])$/.exec(code);
+    if (digit) hud.select(Number(digit[1]) - 1);
+    if (code === 'F3') {
+      e.preventDefault();
+      hud.toggleDebug();
+    }
+  });
+  // 右クリックのメニューを出さない
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
 
   window.addEventListener('resize', () => {
     camera.aspect = container.clientWidth / container.clientHeight;
@@ -133,6 +154,7 @@ async function main() {
   });
 
   let lastTime = performance.now();
+  let fps = 60;
   /**
    * フレームごとの処理: ティックを進め、カメラを補間した位置に置いて描画する。
    * @param {number} now
@@ -149,7 +171,16 @@ async function main() {
     camera.position.set(px, py + player.eyeHeight, pz);
     camera.rotation.set(input.pitch, input.yaw, 0);
     worldRenderer.update(px, pz, renderDistance);
+    interaction.update(camera);
     renderer.render(scene, camera);
+    fps = fps * 0.95 + (elapsed > 0 ? 1 / elapsed : 0) * 0.05;
+    hud.setDebugLines([
+      `FPS ${fps.toFixed(0)}  tick ${clock.tickRate}/s`,
+      `XYZ ${px.toFixed(2)} ${py.toFixed(2)} ${pz.toFixed(2)}`,
+      `chunk ${Math.floor(px / CHUNK_SIZE)} ${Math.floor(pz / CHUNK_SIZE)}  loaded ${world.chunks.size}  meshed ${worldRenderer.chunkRenderer.groups.size}`,
+      `triangles ${renderer.info.render.triangles}  calls ${renderer.info.render.calls}`,
+      `flying ${player.flying}  onGround ${player.onGround}  seed ${seed}`,
+    ]);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -160,7 +191,7 @@ async function main() {
     teleport(x, y, z) { player.pos = [x, y, z]; player.prevPos = [x, y, z]; player.vel = [0, 0, 0]; },
     /** 描画距離を変更する */
     setRenderDistance(d) { settings.set('renderDistance', d); },
-    settings, menu,
+    settings, menu, hud, interaction,
     /** ポインターロックの状態を再現する（自動テスト用。実際のロックは行わない） */
     simulateLock(locked) { input.setLocked(locked); },
     /** 設定を変更する */

@@ -27,6 +27,10 @@ src/player/input.js     キーボード・マウス・ポインターロック
 src/player/doubleTap.js キーの2回押しの検出
 src/ui/settings.js      設定値の検証・保存・通知
 src/ui/menu.js          メニュー画面と設定画面
+src/player/raycast.js   ボクセルのレイキャスト（純粋関数）
+src/player/blockActions.js ブロックの破壊・設置のルール（純粋関数）
+src/player/interaction.js 選択枠の表示と、マウスによる破壊・設置
+src/ui/hud.js           クロスヘア、ホットバー、デバッグ表示
 tools/gen-textures.mjs  base パックのテクスチャ PNG を生成する
 src/core/packLoader.js  データパックの読み込みと深いマージ
 src/core/registry.js    定義の検証、数値IDとテーブルの構築
@@ -60,6 +64,14 @@ main()
   settings.subscribe(applySetting)      描画距離・視野角・感度・ティックレートを反映
   new Menu(settings, onResume)
     buildSettings(container)            settings.json から入力欄を作る
+  new Hud(registry, atlasCanvas, hotbarSlots)
+  new BlockInteraction(scene, world, entities)
+  [左クリック] interaction.breakTarget()
+    breakBlock(world, pos)
+      world.setBlock(x, y, z, AIR)                 dirty → 次のフレームでメッシュを作り直す
+  [右クリック] interaction.placeAtTarget(hud.selectedBlock)
+    placeBlock(world, pos, id, entities)          エンティティと重ならないか確認
+  [1〜9 / ホイール] hud.select(index)
   [開始 / ゲームに戻る ボタン]
     input.requestLock()                 失敗したら menu.setMessage()
   [pointerlockchange]
@@ -77,6 +89,8 @@ main()
               sweepAxis()                         Y → X → Z
       player.interpolatedPos(clock.alpha)         カメラ位置
       worldRenderer.update(x, z, renderDistance)
+      interaction.update(camera)                  視線の先のブロックと選択枠
+        raycast(isTarget, origin, dir, REACH)
         world.update(cx, cz, R, maxLoads)         近い順に生成、遠いものを破棄
           world.loadChunk(cx, cz)
             generator.generate(chunk)
