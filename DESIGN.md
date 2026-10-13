@@ -184,7 +184,7 @@ liquid は自動的に `liquid: true` になる。
 
 | type | 項目（既定値） | 内容 |
 |---|---|---|
-| `tree` | `trunk` "log"、`leaves` "leaves"、`soil` "dirt"、`height` [4, 6]、`leafRadius` 2 | 幹の高さを範囲から乱数で決め、上部に葉を付ける（下2段は半径 `leafRadius`、上2段は半径 `leafRadius - 1`、角は乱数で欠く）。根元の地面を `soil` に置き換える |
+| `tree` | `trunk` "log"、`leaves` "leaves"、`soil` "dirt"、`height` [5, 7]、`leafRadius` 3、`crownHeight` 2、`edgeStart` 0.6、`edgeGap` 0.4、`branches` [0, 2]、`branchLength` 3 | 幹の高さを範囲から乱数で決める。樹冠は幹の先端を中心にした、横の半径 `leafRadius`・縦の半径 `crownHeight` の平たい楕円体で、木ごとに x と z の半径を ±15% の範囲で変える。中心からの距離（楕円体の半径を 1 とした2乗）が `edgeStart` を超える葉は `edgeGap` の確率で欠く。枝は `branches` の範囲の本数だけ、樹冠の少し下から別々の水平方向へ斜め上（1段ずつ上がる）に `branchLength` ブロック伸ばし、先に半径 1.5 の小さな葉の塊を付ける。根元の地面を `soil` に置き換える。水平の広がり（`extent`）は樹冠と枝の大きい方 |
 | `template` | `blocks` [] | `[dx, dy, dz, "ブロックID"]` の並びをそのまま置く |
 
 座標は起点（地表の1つ上）からの相対座標。新しい形の構造物は、`src/world/structures/` にジェネレータを追加し、`index.js` の一覧に登録する。

@@ -18,18 +18,29 @@ const GRASS = registry.blockId('grass');
 const DIRT = registry.blockId('dirt');
 const SEED = 4242;
 
-test('tree generator builds a trunk within the height range and leaves above it', () => {
+test('tree generator builds a trunk, an ellipsoid crown and branches within its extent', () => {
   const def = resolveStructure(defs.structures.oak_tree);
-  for (let s = 0; s < 20; s++) {
+  const extent = STRUCTURE_TYPES.tree.extent(def);
+  let branched = 0;
+  for (let s = 0; s < 40; s++) {
     const blocks = STRUCTURE_TYPES.tree.build(def, createRandom(s), (id) => registry.blockId(id));
-    const trunk = blocks.filter((b) => b.id === LOG);
+    const logs = blocks.filter((b) => b.id === LOG);
+    const trunk = logs.filter((b) => b.dx === 0 && b.dz === 0);
     assert.ok(trunk.length >= def.height[0] && trunk.length <= def.height[1]);
-    assert.ok(trunk.every((b) => b.dx === 0 && b.dz === 0));
+    const branchLogs = logs.length - trunk.length;
+    assert.ok(branchLogs <= def.branches[1] * def.branchLength);
+    if (branchLogs > 0) branched++;
     const leaves = blocks.filter((b) => b.id === LEAVES);
-    assert.ok(leaves.length > 20);
-    assert.ok(leaves.every((b) => Math.abs(b.dx) <= def.leafRadius && Math.abs(b.dz) <= def.leafRadius));
+    assert.ok(leaves.length > 30);
+    assert.ok(leaves.every((b) => b.dy >= 0), 'leaves are above the ground');
+    assert.ok(blocks.every((b) => Math.abs(b.dx) <= extent && Math.abs(b.dz) <= extent), 'blocks stay within the extent');
+    // 樹冠は横に広く縦に低い
+    const width = Math.max(...leaves.map((b) => b.dx)) - Math.min(...leaves.map((b) => b.dx));
+    const tall = Math.max(...leaves.map((b) => b.dy)) - Math.min(...leaves.map((b) => b.dy));
+    assert.ok(width >= 4 && width >= tall, `crown ${width} wide, ${tall} tall`);
     assert.ok(blocks.some((b) => b.dy === -1 && b.id === DIRT && b.force), 'soil under the trunk');
   }
+  assert.ok(branched > 10 && branched < 40, `${branched} of 40 trees have branches`);
 });
 
 test('structure blocks: logs replace leaves but not the other way round', () => {
@@ -93,6 +104,10 @@ test('structure validation reports bad definitions and rules', () => {
   assert.throws(() => buildRegistry(withStructure({ type: 'tree', trunk: 'nope' })), /unknown block "nope"/);
   assert.throws(() => buildRegistry(withStructure({ type: 'tree', height: [5, 2] })), /"height" must be/);
   assert.throws(() => buildRegistry(withStructure({ type: 'tree', hight: [5, 2] })), /unknown parameter "hight"/);
+  assert.throws(() => buildRegistry(withStructure({ type: 'tree', branches: [-1, 2] })), /"branches" must be/);
+  assert.throws(() => buildRegistry(withStructure({ type: 'tree', leafRadius: 0 })), /"leafRadius" must be positive/);
+  assert.throws(() => buildRegistry(withStructure({ type: 'tree', edgeGap: 2 })), /"edgeGap" must be 0..1/);
+  assert.throws(() => buildRegistry(withStructure({ type: 'tree', branchLength: 0 })), /"branchLength" must be/);
   assert.throws(() => buildRegistry(withStructure({ type: 'template', blocks: [[0, 0, 0, 'nope']] })), /unknown block "nope"/);
   const rules = (r) => ({ ...base, worldgen: { ...base.worldgen, structures: [r] } });
   assert.throws(() => buildRegistry(rules({ structure: 'nope', attemptsPerChunk: 1, chance: 1 })), /unknown structure/);
