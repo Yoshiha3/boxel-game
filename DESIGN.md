@@ -180,6 +180,7 @@ liquid は自動的に `liquid: true` になる。
 | `playerControl` | 0 | なし | キーボード・マウスの入力を `control` と向きに写す |
 | `walk` | 30 | `speed` 4.3、`sprintSpeed` 5.6、`jumpSpeed` 8.4、`groundAccel` 20、`airAccel` 4 | `control` に従って歩く。水平速度を目標速度へ `1 - exp(-accel·dt)` の割合で近づける。地上で `jump` なら上向きに `jumpSpeed` |
 | `gravity` | 40 | `acceleration` 28、`terminalVelocity` 60 | 下向きの加速度。飛行中は無効 |
+| `flight` | 20 | `speed` 10.9、`sprintSpeed` 21.6、`verticalSpeed` 7.5、`accel` 10 | `control.toggleFlight` で飛行を切り替える。飛行中は重力なし、`jump` で上昇・`descend` で下降。速度は目標速度へ指数的に近づける。着地した状態で `descend` すると飛行をやめる |
 | `collision` | 100 | なし | ブロックとの当たり判定を有効にする |
 
 ジャンプの高さは `jumpSpeed² / (2·acceleration)` = 約 1.26 ブロック（1 ブロックの段差を越えられる）。
@@ -198,7 +199,11 @@ liquid は自動的に `liquid: true` になる。
 | 走る | Ctrl |
 | 視点 | マウス（ポインターロック中のみ） |
 
+| 飛行の切り替え | Space を 300ms 以内に2回押す |
+
 - キー入力はポインターロック中だけ受け付ける。ロックが外れたら押しているキーをすべて離した扱いにする
+- 2回押しの検出は `DoubleTapDetector`（`src/player/doubleTap.js`）。検出したら状態を戻すので、3回目の押下は新しい1回目になる
+- 飛行の切り替え指示は `Input.pendingToggleFlight` に溜め、次のティックの `getControl()` で1回だけ `control.toggleFlight = true` として渡す
 
 ## スポーン（`src/world/spawn.js`）
 - 原点から外側へ、4 ブロック間隔の正方形の輪で、地表が海面以上の場所を探す。見つかった地表の 1 つ上に立たせる

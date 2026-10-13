@@ -9,10 +9,11 @@ import playerControl from './playerControl.js';
 import walk from './walk.js';
 import gravity from './gravity.js';
 import collision from './collision.js';
+import flight from './flight.js';
 
 /** @type {Object<string, {name: string, order: number, defaults: Object<string, any>, update?: Function}>} */
 export const COMPONENTS = Object.fromEntries(
-  [playerControl, walk, gravity, collision].map((c) => [c.name, c]),
+  [playerControl, walk, gravity, collision, flight].map((c) => [c.name, c]),
 );
 
 /**

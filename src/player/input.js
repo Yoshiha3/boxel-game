@@ -14,6 +14,8 @@ export const KEYMAP = {
   sprint: ['ControlLeft', 'ControlRight'],
 };
 
+import { DoubleTapDetector } from './doubleTap.js';
+
 /** 上下の視点の限界（真上・真下の少し手前） */
 const PITCH_LIMIT = Math.PI / 2 - 0.001;
 
@@ -32,6 +34,10 @@ export class Input {
     this.sensitivity = 0.0025;
     /** ポインターロック中か */
     this.locked = false;
+    /** Space の2回押しの検出 */
+    this.jumpDoubleTap = new DoubleTapDetector(300);
+    /** 次のティックで飛行を切り替えるか（getControl で消費する） */
+    this.pendingToggleFlight = false;
     /** @type {((code: string, e: KeyboardEvent) => void)[]} キーが押されたとき（リピートを除く）に呼ぶ関数 */
     this.keyDownListeners = [];
     /** @type {((locked: boolean) => void)[]} ロック状態が変わったときに呼ぶ関数 */
@@ -46,6 +52,7 @@ export class Input {
       if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
       if (!e.repeat) {
         this.keys.add(e.code);
+        if (KEYMAP.jump.includes(e.code) && this.jumpDoubleTap.press(e.timeStamp)) this.pendingToggleFlight = true;
         for (const fn of this.keyDownListeners) fn(e.code, e);
       }
     });
@@ -89,7 +96,7 @@ export class Input {
   }
 
   /**
-   * 押されているキーから操作入力を作る。
+   * 押されているキーから操作入力を作る。飛行の切り替え指示はここで消費する（ティックごとに呼ぶ）。
    * @returns {import('../entities/entity.js').Control}
    */
   getControl() {
@@ -100,6 +107,17 @@ export class Input {
       jump: k('jump'),
       descend: k('descend'),
       sprint: k('sprint'),
+      toggleFlight: this.consumeToggleFlight(),
     };
+  }
+
+  /**
+   * 飛行の切り替え指示を取り出す（1回だけ true を返す）。
+   * @returns {boolean}
+   */
+  consumeToggleFlight() {
+    const v = this.pendingToggleFlight;
+    this.pendingToggleFlight = false;
+    return v;
   }
 }

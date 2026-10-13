@@ -5,7 +5,8 @@
 
 /**
  * エンティティを操作する入力（プレイヤーはキーボード、動物は AI が書き込む）。
- * @typedef {{forward: number, strafe: number, jump: boolean, descend: boolean, sprint: boolean}} Control
+ * toggleFlight は1回だけ有効な指示で、flight コンポーネントが消費する。
+ * @typedef {{forward: number, strafe: number, jump: boolean, descend: boolean, sprint: boolean, toggleFlight?: boolean}} Control
  */
 
 /**
@@ -13,7 +14,7 @@
  * @returns {Control}
  */
 export function emptyControl() {
-  return { forward: 0, strafe: 0, jump: false, descend: false, sprint: false };
+  return { forward: 0, strafe: 0, jump: false, descend: false, sprint: false, toggleFlight: false };
 }
 
 export class Entity {

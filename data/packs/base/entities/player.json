@@ -7,6 +7,7 @@
     "playerControl": {},
     "walk": { "speed": 4.3, "sprintSpeed": 5.6, "jumpSpeed": 8.4, "groundAccel": 20, "airAccel": 4 },
     "gravity": { "acceleration": 28, "terminalVelocity": 60 },
-    "collision": {}
+    "collision": {},
+    "flight": { "speed": 10.9, "sprintSpeed": 21.6, "verticalSpeed": 7.5, "accel": 10 }
   }
 }

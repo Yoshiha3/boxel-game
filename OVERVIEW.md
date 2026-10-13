@@ -22,8 +22,9 @@ src/core/tickClock.js   固定ステップのティック
 src/physics/aabb.js     AABB とボクセルの衝突判定
 src/entities/entity.js  エンティティ
 src/entities/entityManager.js エンティティの更新と移動
-src/entities/components/ コンポーネント（playerControl, walk, gravity, collision）
+src/entities/components/ コンポーネント（playerControl, flight, walk, gravity, collision）
 src/player/input.js     キーボード・マウス・ポインターロック
+src/player/doubleTap.js キーの2回押しの検出
 tools/gen-textures.mjs  base パックのテクスチャ PNG を生成する
 src/core/packLoader.js  データパックの読み込みと深いマージ
 src/core/registry.js    定義の検証、数値IDとテーブルの構築
@@ -56,9 +57,10 @@ main()
   requestAnimationFrame(frame)
     frame(now)
       clock.advance(elapsed)                      実行するティック数
+      input.getControl()                          キー状態 + 溜めた飛行切り替え（consumeToggleFlight）
       entities.update(dt, input)                  ティックごと
         updateEntity(e, ctx)
-          COMPONENTS[name].update(e, params, ctx) order 順（playerControl → walk → gravity）
+          COMPONENTS[name].update(e, params, ctx) order 順（playerControl → flight → walk → gravity）
           integrate(e, dt, isSolid)
             moveWithCollision(isSolid, pos, size, delta)
               sweepAxis()                         Y → X → Z
