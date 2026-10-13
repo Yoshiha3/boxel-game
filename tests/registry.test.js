@@ -57,10 +57,16 @@ test('face textures fall back from all/side and share tiles', () => {
   assert.notEqual(reg.faceTile[x * FACE_COUNT + FACE.PY], reg.faceTile[x * FACE_COUNT + FACE.PX]);
 });
 
+const baseDefs = await loadDefaultDefs();
+const baseWorldgen = baseDefs.worldgen;
+
 test('validation reports missing textures, bad render and unknown hotbar blocks', () => {
   assert.throws(() => buildRegistry(defsWith({ x: { id: 'x', textures: { top: 't.png' } } })), /missing texture/);
   assert.throws(() => buildRegistry(defsWith({ x: { id: 'x', render: 'blob', textures: { all: 'a.png' } } })), /unknown render/);
   assert.throws(() => buildRegistry(defsWith({}, { hotbar: { slots: ['nope'] } })), /hotbar: unknown block "nope"/);
   assert.throws(() => buildRegistry(defsWith({ air: { id: 'air', textures: { all: 'a.png' } } })), /reserved/);
+  const river = { frequency: 0.01, width: 0.2, bankWidth: 0.1, depth: 3, maxHeight: 6, fadeHeight: 10 };
+  const worldgen = { ...structuredClone(baseWorldgen), river };
+  assert.throws(() => buildRegistry({ ...baseDefs, worldgen }), /"width" must be smaller than "bankWidth"/);
   assert.throws(() => buildRegistry(defsWith({ w: { id: 'w', render: 'liquid', fog: { color: 1 }, textures: { all: 'a.png' } } })), /fog needs/);
 });

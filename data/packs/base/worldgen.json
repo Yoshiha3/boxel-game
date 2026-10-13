@@ -22,9 +22,12 @@
     "liquid": "water"
   },
   "river": {
-    "frequency": 0.0035,
-    "bankWidth": 0.07,
-    "depth": 4
+    "frequency": 0.0025,
+    "width": 0.035,
+    "bankWidth": 0.1,
+    "depth": 3,
+    "maxHeight": 3,
+    "fadeHeight": 6
   },
   "beach": {
     "block": "sand",

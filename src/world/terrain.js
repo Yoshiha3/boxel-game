@@ -44,22 +44,38 @@ export function createTerrainGenerator(seed, worldgen, registry) {
   const beachTop = beach ? seaLevel + beach.maxHeightAboveSea : seaLevel - 1;
 
   /**
+   * 川を作る前の地表の高さ（小数）を返す。
+   * @param {number} x
+   * @param {number} z
+   * @returns {number}
+   */
+  function baseHeightAt(x, z) {
+    const h = fbm2D(heightNoise, x, z, height) * height.amplitude;
+    // 丘: 低周波ノイズの正の部分だけを持ち上げる
+    const hill = Math.max(0, hillNoise(x * hills.frequency, z * hills.frequency)) * hills.amplitude;
+    return height.base + h + hill;
+  }
+
+  /**
    * ワールド座標 (x, z) の地表の高さ（一番上の固体ブロックの y）を返す。
    * @param {number} x
    * @param {number} z
    * @returns {number}
    */
   function heightAt(x, z) {
-    const h = fbm2D(heightNoise, x, z, height) * height.amplitude;
-    // 丘: 低周波ノイズの正の部分だけを持ち上げる
-    const hill = Math.max(0, hillNoise(x * hills.frequency, z * hills.frequency)) * hills.amplitude;
-    let top = height.base + h + hill;
+    let top = baseHeightAt(x, z);
     if (river) {
-      // 川: ノイズの絶対値が小さい帯で、地表を川底（海面 - depth）へ向けてなめらかに下げる
-      const r = Math.abs(riverNoise(x * river.frequency, z * river.frequency));
-      if (r < river.bankWidth) {
+      // 川: 標高が高いほど削る量を減らし、高地では削らない（丘を谷のように削らないため）
+      const s = 1 - smoothstep((top - seaLevel - river.maxHeight) / river.fadeHeight);
+      if (s > 0) {
+        const r = Math.abs(riverNoise(x * river.frequency, z * river.frequency));
         const bed = seaLevel - river.depth;
-        if (top > bed) top = bed + (top - bed) * smoothstep(r / river.bankWidth);
+        if (r < river.bankWidth && top > bed) {
+          // 中心の width の範囲は平らな川底、その外側の岸でなめらかに元の高さへ戻す
+          const t = r <= river.width ? 0 : (r - river.width) / (river.bankWidth - river.width);
+          const carved = bed + (top - bed) * smoothstep(t);
+          top += (carved - top) * s;
+        }
       }
     }
     return Math.max(1, Math.min(WORLD_HEIGHT - 2, Math.floor(top)));
@@ -92,5 +108,5 @@ export function createTerrainGenerator(seed, worldgen, registry) {
     }
   }
 
-  return { heightAt, generate, seaLevel };
+  return { heightAt, baseHeightAt, generate, seaLevel };
 }

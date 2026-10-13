@@ -101,6 +101,14 @@ function validateHotbar(hotbar, blocks, errors) {
 function validateWorldgen(worldgen, blocks, errors) {
   if (!worldgen || Object.keys(worldgen).length === 0) return;
   if (typeof worldgen.seaLevel !== 'number') errors.push('worldgen: "seaLevel" must be a number');
+  const river = worldgen.river;
+  if (river) {
+    for (const key of ['frequency', 'width', 'bankWidth', 'depth', 'maxHeight', 'fadeHeight']) {
+      if (typeof river[key] !== 'number') errors.push(`worldgen.river.${key} must be a number`);
+    }
+    if (!(river.width < river.bankWidth)) errors.push('worldgen.river: "width" must be smaller than "bankWidth"');
+    if (!(river.fadeHeight > 0)) errors.push('worldgen.river: "fadeHeight" must be positive');
+  }
   for (const [where, id] of worldgenBlockRefs(worldgen)) {
     if (!(id in blocks)) errors.push(`worldgen.${where}: unknown block "${id}"`);
   }

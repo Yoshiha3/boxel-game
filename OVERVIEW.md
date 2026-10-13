@@ -127,9 +127,10 @@ createTerrainGenerator(seed, worldgen, registry)
   createNoise2D(seed) / createNoise2D(seed + 1)
   generate(chunk)                       チャンクを地形で埋める
     heightAt(x, z)                      地表の高さ
-      fbm2D(heightNoise, x, z, height)
-      hillNoise(x, z)
-      riverNoise(x, z)                  川の帯で地表を川底へ下げる（smoothstep）
+      baseHeightAt(x, z)                川を作る前の高さ
+        fbm2D(heightNoise, x, z, height)
+        hillNoise(x, z)
+      riverNoise(x, z)                  川の帯で地表を平らな川底へ下げる（標高が高いほど弱める）
     chunk.set(x, y, z, id)              岩盤・石・土・草・砂（水中・砂浜）・水
 ```
 

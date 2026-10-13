@@ -92,19 +92,31 @@ liquid は自動的に `liquid: true` になる。
   "hills": { "amplitude": 22, "frequency": 0.0025 },
   "layers": { "top": "grass", "filler": "dirt", "fillerDepth": 3, "stone": "stone",
               "bedrock": "bedrock", "underwater": "sand", "liquid": "water" },
-  "river": { "frequency": 0.0035, "bankWidth": 0.07, "depth": 4 },
+  "river": { "frequency": 0.0025, "width": 0.035, "bankWidth": 0.1, "depth": 3, "maxHeight": 3, "fadeHeight": 6 },
   "beach": { "block": "sand", "maxHeightAboveSea": 1 }
 }
 ```
 - 地表の高さ（`heightAt`）
   1. `height.base + fbm(height) × height.amplitude + max(0, hillNoise) × hills.amplitude`
-  2. 川: 川ノイズ `r`（シード + 2）の絶対値が `bankWidth` 未満の帯では、地表を川底 `seaLevel - depth` へ向けて下げる。`h = bed + (h - bed) × smoothstep(|r| / bankWidth)`。中心ほど深く、岸に向かってなめらかに元の高さへ戻る
+  2. 川（下の表）: 1 の高さを `h0`（`baseHeightAt`）とし、川ノイズ `r`（シード + 2）の絶対値で川の帯を決める
+     - 削った後の高さ: `carved = bed + (h0 - bed) × smoothstep(t)`。`bed = seaLevel - depth`。`t` は `|r| ≤ width` で 0（平らな川底）、`width〜bankWidth` で 0→1（岸）
+     - 標高による弱まり: `s = 1 - smoothstep((h0 - seaLevel - maxHeight) / fadeHeight)`。最終的な高さは `h0 + (carved - h0) × s`
+     - 低地（海面 + maxHeight 以下）では幅のある平らな川になる。そこより高い場所では削る量が減り、海面 + maxHeight + fadeHeight より高い場所は削らない。丘を谷のように削らず、川は丘のふもとの入り江のような形で終わる
   3. 1〜126 に収めて整数にする
+| river のパラメータ | 既定値 | 説明 |
+|---|---|---|
+| `frequency` | 0.0025 | 川ノイズの周波数（小さいほどゆったり蛇行する） |
+| `width` | 0.035 | `\|r\|` がこれ未満は平らな川底 |
+| `bankWidth` | 0.1 | `\|r\|` がこれ未満までが岸（`width` より大きいこと） |
+| `depth` | 3 | 川底の深さ（海面から） |
+| `maxHeight` | 3 | 元の地表が海面 + これ以下なら、川を完全に削る |
+| `fadeHeight` | 6 | そこからこの高さまでで、削る量を 0 まで減らす |
+
 - 縦の並び: y=0 は `bedrock`、地表は `top`、その下 `fillerDepth` 段は `filler`、それより下は `stone`
   - 地表が海面より下なら、地表と `filler` は `underwater`（砂）
   - 地表が海面から `beach.maxHeightAboveSea` 以内なら、地表と `filler` は `beach.block`（砂浜）
 - 海と川: 地表より上で `seaLevel` 以下の空間は `liquid`（水）で埋める。川は地表を海面より下げるだけで、水張りは海と同じ処理
-- ブロックIDの参照（`layers.*`、`beach.block`）は registry で検証する
+- ブロックIDの参照（`layers.*`、`beach.block`）と、`river` の数値パラメータ（`width < bankWidth`、`fadeHeight > 0`）は registry で検証する
 
 ## メッシュ生成と面カリング（`src/render/mesher.js`）
 - `buildChunkMeshData(chunk, registry, tileUVs, getNeighbor)` は、描画の種類ごと（`opaque` / `cutout` / `liquid`）に頂点データ（位置、法線、UV、頂点カラー、インデックス）を作る。three.js には依存しない

@@ -79,21 +79,47 @@ test('findSpawn returns a dry surface position', async () => {
   assert.equal(y, gen.heightAt(Math.floor(x), Math.floor(z)) + 1);
 });
 
-test('river centers are below sea level', () => {
-  const gen = createTerrainGenerator(123, defs.worldgen, registry);
-  // 地形と同じシードで川のノイズを作り、ノイズが 0 に近い（川の中心）場所を調べる
+/**
+ * 川のノイズが 0 に近い（川の中心の）場所を、標高で分けて集める。
+ * @param {ReturnType<typeof createTerrainGenerator>} gen
+ */
+function riverCenters(gen) {
+  // 地形と同じシードで川のノイズを作る
   const river = createNoise2D(123 + 2);
-  const f = defs.worldgen.river.frequency;
-  let riverCells = 0;
-  for (let x = -600; x < 600; x += 3) {
-    for (let z = -600; z < 600; z += 3) {
-      if (Math.abs(river(x * f, z * f)) < 0.01) {
-        riverCells++;
-        assert.ok(gen.heightAt(x, z) < gen.seaLevel, `dry river at ${x},${z}`);
-      }
+  const { frequency, width, maxHeight, fadeHeight } = defs.worldgen.river;
+  const lowland = [], highland = [];
+  for (let x = -1500; x < 1500; x += 3) {
+    for (let z = -1500; z < 1500; z += 3) {
+      const r = Math.abs(river(x * frequency, z * frequency));
+      if (r >= width * 0.5) continue;
+      const base = gen.baseHeightAt(x, z);
+      if (base <= gen.seaLevel + maxHeight) lowland.push([x, z]);
+      else if (base > gen.seaLevel + maxHeight + fadeHeight) highland.push([x, z]);
     }
   }
-  assert.ok(riverCells > 100, `found ${riverCells} river cells`);
+  return { lowland, highland };
+}
+
+test('lowland rivers have a flat bed below sea level', () => {
+  const gen = createTerrainGenerator(123, defs.worldgen, registry);
+  const { lowland } = riverCenters(gen);
+  assert.ok(lowland.length > 100, `found ${lowland.length} lowland river cells`);
+  const bed = gen.seaLevel - defs.worldgen.river.depth;
+  for (const [x, z] of lowland) {
+    const h = gen.heightAt(x, z);
+    assert.ok(h < gen.seaLevel, `dry river at ${x},${z}`);
+    // 元の地表が川底より低い場所（海底など）はそのまま
+    if (gen.baseHeightAt(x, z) > bed) assert.equal(h, bed, `flat bed at ${x},${z}`);
+  }
+});
+
+test('rivers do not carve high terrain', () => {
+  const gen = createTerrainGenerator(123, defs.worldgen, registry);
+  const { highland } = riverCenters(gen);
+  assert.ok(highland.length > 10, `found ${highland.length} highland river cells`);
+  for (const [x, z] of highland) {
+    assert.equal(gen.heightAt(x, z), Math.floor(gen.baseHeightAt(x, z)), `carved at ${x},${z}`);
+  }
 });
 
 test('shores are sand and low ground is flooded up to sea level', () => {
