@@ -63,3 +63,10 @@ liquid は自動的に `liquid: true` になる。
 - 数値IDは、空気を 0 とし、残りを文字列IDのソート順で 1 から振る（パックの読み込み順に依存しない）
 - 実行時のテーブル（添字は数値ID）: `solid` / `opaque` / `liquid` / `cullSameType` / `renderType`（Uint8Array）、`faceTile`（`id * 6 + 面` → タイル番号、Uint16Array）
 - `textures` は、重複を除いたテクスチャのパスをタイル番号順に並べたもの。アトラスはこの順に画像を並べて作る
+
+## テクスチャ
+- ブロックのテクスチャは面ごとの 16x16 PNG で、各パックの `textures/` に置く（base パックは `data/packs/base/textures/blocks/`）
+- base パックの PNG は `tools/gen-textures.mjs`（`npm run textures`）で手続き的に生成する。シード固定なので結果は毎回同じ。手描きの PNG で上書きしてもよい（その場合は生成スクリプトから該当テクスチャを外す）
+- 起動時に `buildTextureAtlas(registry)` が `registry.textures` の順に画像を canvas に並べ、1枚のアトラスにする。フィルタは `NearestFilter`、ミップマップなし
+- アトラスの配置（`src/render/atlasLayout.js`）: 列数 = ceil(√n)、行数 = ceil(n / 列数)。タイル t は (t % 列数, floor(t / 列数)) のセルに置く。UV の表 `tileUVs` は `t * 4 → [u0, v0, u1, v1]`（flipY のため画像の上端が v=1）
+- 透過: 葉とガラスはアルファ 0 のピクセルを持ち、`alphaTest` で切り抜く

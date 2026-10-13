@@ -8,6 +8,9 @@ index.html              importmap（three.js を CDN から）、エントリー
 src/main.js             起動処理とゲームループ
 src/core/constants.js   定数
 src/core/dataLoader.js  ブラウザ用: fetch でパックを読みレジストリを作る
+src/render/atlas.js     テクスチャ PNG を読み込み、アトラスを作る
+src/render/atlasLayout.js アトラスの配置と UV の計算（純粋関数）
+tools/gen-textures.mjs  base パックのテクスチャ PNG を生成する
 src/core/packLoader.js  データパックの読み込みと深いマージ
 src/core/registry.js    定義の検証、数値IDとテーブルの構築
 data/packs.json         有効なパックの一覧
@@ -23,6 +26,9 @@ main()
     loadPacks(fetchJson, packNames)     （下の「データの読み込み」）
     buildRegistry(defs)
   createRenderer(container)
+  buildTextureAtlas(registry)           PNG を canvas に並べて CanvasTexture にする
+    loadImage(path)
+    buildTileUVs(count)                 タイル番号 → UV の表
   requestAnimationFrame(frame)
     frame()                             毎フレーム描画
 ```

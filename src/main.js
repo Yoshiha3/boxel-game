@@ -3,6 +3,8 @@
  */
 import * as THREE from 'three';
 import { loadRegistry } from './core/dataLoader.js';
+import { buildTextureAtlas } from './render/atlas.js';
+import { FACE_COUNT } from './core/constants.js';
 
 /**
  * WebGL レンダラーを作り、コンテナに追加する。
@@ -15,6 +17,26 @@ function createRenderer(container) {
   renderer.setSize(container.clientWidth, container.clientHeight);
   container.appendChild(renderer.domElement);
   return renderer;
+}
+
+/**
+ * ブロック1個分のプレビュー用ジオメトリを作る（BoxGeometry の面順は FACE と同じ）。
+ * @param {import('./core/registry.js').Registry} registry
+ * @param {Float32Array} tileUVs
+ * @param {number} id 数値ID
+ * @returns {THREE.BoxGeometry}
+ */
+function createBlockPreviewGeometry(registry, tileUVs, id) {
+  const geo = new THREE.BoxGeometry(1, 1, 1);
+  const uv = geo.attributes.uv;
+  for (let face = 0; face < FACE_COUNT; face++) {
+    const t = registry.faceTile[id * FACE_COUNT + face] * 4;
+    for (let i = face * 4; i < face * 4 + 4; i++) {
+      uv.setXY(i, tileUVs[t] + uv.getX(i) * (tileUVs[t + 2] - tileUVs[t]),
+        tileUVs[t + 1] + uv.getY(i) * (tileUVs[t + 3] - tileUVs[t + 1]));
+    }
+  }
+  return geo;
 }
 
 /**
@@ -32,9 +54,16 @@ async function main() {
   camera.lookAt(0.5, 0.5, 0.5);
 
   scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.0));
-  const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x55aa44 }));
-  cube.position.set(0.5, 0.5, 0.5);
-  scene.add(cube);
+  const atlas = await buildTextureAtlas(registry);
+  const material = new THREE.MeshLambertMaterial({ map: atlas.texture, alphaTest: 0.5, transparent: true });
+  // 仮表示: 全ブロックを1列に並べる（チャンクのメッシュ生成ができたら置き換える）
+  for (let id = 1; id < registry.blockIds.length; id++) {
+    const cube = new THREE.Mesh(createBlockPreviewGeometry(registry, atlas.tileUVs, id), material);
+    cube.position.set((id - 1) * 1.5 - registry.blockIds.length * 0.75, 0.5, 0);
+    scene.add(cube);
+  }
+  camera.position.set(0, 4, 10);
+  camera.lookAt(0, 0, 0);
 
   window.addEventListener('resize', () => {
     camera.aspect = container.clientWidth / container.clientHeight;
