@@ -84,6 +84,7 @@ liquid は自動的に `liquid: true` になる。
 
 ## ノイズ（`src/world/noise.js`）
 - `createNoise2D(seed)`: シード付きの 2D シンプレックスノイズ（およそ -1〜1）
+- `createNoise3D(seed)`: シード付きの 3D シンプレックスノイズ（およそ -1〜1。洞窟に使う）。2D と同じ置換表の作り方（`buildPermutation`）
 - `fbm2D(noise, x, y, {octaves, frequency, persistence, lacunarity})`: オクターブを重ねたノイズ（振幅の合計で正規化）
 - `hash3(seed, x, y, z)`: 整数座標の決定的なハッシュ（構造物の配置などに使う）
 - `createRandom(seed)`: シード付きの擬似乱数（mulberry32）

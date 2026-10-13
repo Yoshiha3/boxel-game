@@ -144,3 +144,23 @@ test('shores are sand and low ground is flooded up to sea level', () => {
   }
   assert.ok(shoreCells > 0, 'some shore exists in the sample area');
 });
+
+test('3D noise is deterministic, bounded and varies in all axes', async () => {
+  const { createNoise3D } = await import('../src/world/noise.js');
+  const a = createNoise3D(5), b = createNoise3D(5), c = createNoise3D(6);
+  let min = Infinity, max = -Infinity, differs = false;
+  for (let i = 0; i < 5000; i++) {
+    const x = i * 0.137, y = i * 0.071, z = i * 0.193;
+    const v = a(x, y, z);
+    assert.equal(v, b(x, y, z));
+    if (v !== c(x, y, z)) differs = true;
+    min = Math.min(min, v);
+    max = Math.max(max, v);
+  }
+  assert.ok(min >= -1.05 && max <= 1.05, `range ${min}..${max}`);
+  assert.ok(max - min > 1, 'uses most of the range');
+  assert.ok(differs);
+  for (const d of [[1, 0, 0], [0, 1, 0], [0, 0, 1]]) {
+    assert.notEqual(a(0.3, 0.3, 0.3), a(0.3 + d[0] * 0.5, 0.3 + d[1] * 0.5, 0.3 + d[2] * 0.5));
+  }
+});
