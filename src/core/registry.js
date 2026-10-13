@@ -10,6 +10,7 @@ import { worldgenBlockRefs } from '../world/terrain.js';
 import { validateEntityDef } from '../entities/components/index.js';
 import { validateSettings } from '../ui/settings.js';
 import { validatePlacementRules, validateStructureDef } from '../world/structures/index.js';
+import { validateCaves } from '../world/caves.js';
 
 /** 描画の種類の番号 */
 export const RENDER = Object.freeze({ NONE: 0, CUBE: 1, CUTOUT: 2, LIQUID: 3 });
@@ -131,6 +132,7 @@ export function buildRegistry(defs) {
   const hasBlock = (id) => typeof id === 'string' && id in defs.blocks;
   for (const def of Object.values(defs.structures)) validateStructureDef(def, hasBlock, errors);
   validatePlacementRules(defs.worldgen?.structures, defs.structures, hasBlock, errors);
+  validateCaves(defs.worldgen?.caves, errors);
   if (errors.length) throw new Error(`Invalid data:\n- ${errors.join('\n- ')}`);
   return new Registry(defs);
 }

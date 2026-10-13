@@ -47,5 +47,19 @@
         "max": 1.0
       }
     }
-  ]
+  ],
+  "caves": {
+    "minY": 5,
+    "sampleStep": 4,
+    "tunnel": {
+      "frequency": 0.01,
+      "verticalScale": 1.6,
+      "radius": 0.15
+    },
+    "cavern": {
+      "frequency": 0.015,
+      "threshold": 0.75,
+      "maxY": 45
+    }
+  }
 }

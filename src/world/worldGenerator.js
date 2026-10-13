@@ -1,8 +1,9 @@
 /**
- * ワールドの生成器: 地形の生成と構造物の配置をまとめる。
+ * ワールドの生成器: 地形の生成・洞窟の削り・構造物の配置をまとめる。
  */
 import { createTerrainGenerator } from './terrain.js';
 import { createStructurePlacer } from './structurePlacer.js';
+import { createCaveCarver } from './caves.js';
 
 /**
  * @param {number} seed
@@ -11,16 +12,21 @@ import { createStructurePlacer } from './structurePlacer.js';
  */
 export function createWorldGenerator(seed, worldgen, registry) {
   const terrain = createTerrainGenerator(seed, worldgen, registry);
-  const structures = createStructurePlacer(seed, worldgen, registry, terrain);
+  const caves = createCaveCarver(seed, worldgen, terrain);
+  // 構造物とスポーンの判定では、洞窟で削られた場所も考慮する
+  const ground = { ...terrain, isCarved: caves.isCarved };
+  const structures = createStructurePlacer(seed, worldgen, registry, ground);
   return {
-    ...terrain,
+    ...ground,
     structures,
+    caves,
     /**
-     * チャンクを生成する（地形 → 構造物）。
+     * チャンクを生成する（地形 → 洞窟 → 構造物）。
      * @param {import('./chunk.js').Chunk} chunk
      */
     generate(chunk) {
       terrain.generate(chunk);
+      caves.carve(chunk);
       structures.place(chunk);
     },
   };

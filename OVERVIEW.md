@@ -13,7 +13,8 @@ src/render/atlasLayout.js アトラスの配置と UV の計算（純粋関数�
 src/world/noise.js      シード付きノイズ、ハッシュ、乱数
 src/world/chunk.js      チャンクのデータ構造と座標変換
 src/world/terrain.js    地形の生成器
-src/world/worldGenerator.js 地形と構造物をまとめた生成器
+src/world/worldGenerator.js 地形・洞窟・構造物をまとめた生成器
+src/world/caves.js      洞窟（3D ノイズで削る）
 src/world/structurePlacer.js 構造物の配置（チャンクをまたぐ）
 src/world/structures/   構造物ジェネレータ（tree, template）
 src/render/mesher.js    面カリング付きのメッシュ生成（純粋関数）
@@ -57,6 +58,7 @@ main()
   readSeed()                            URL の ?seed=
   createWorldGenerator(seed, worldgen, registry)
     createTerrainGenerator(...)
+    createCaveCarver(...)
     createStructurePlacer(...)
   new World(registry, generator)
   new WorldRenderer(world, chunkRenderer, tileUVs)
@@ -100,7 +102,7 @@ main()
       worldRenderer.update(x, z, renderDistance)
         world.update(cx, cz, R, maxLoads)         近い順に生成、遠いものを破棄
           world.loadChunk(cx, cz)
-            generator.generate(chunk)               地形 → 構造物（下の「地形の生成」「構造物の配置」）
+            generator.generate(chunk)               地形 → 洞窟 → 構造物（下の「地形の生成」「洞窟」「構造物の配置」）
         chunkRenderer.removeChunk(key)            破棄・範囲外のメッシュを外す
         world.takeChunksToMesh(cx, cz, R, max)    隣が揃った dirty チャンク
         buildChunkMeshData(chunk, ..., world.neighborLookup(chunk))
@@ -150,6 +152,18 @@ chunkRenderer.setChunkMesh(key, cx, cz, meshData)
 chunkRenderer.removeChunk(key)          geometry.dispose()
 ```
 
+### 洞窟
+```
+createCaveCarver(seed, worldgen, terrain)
+  createNoise3D(seed + 10 / 11 / 12)
+carve(chunk)                            地形の生成後に呼ぶ
+  fieldAtGrid(gx, gy, gz)               格子点の削り具合（チャンク分をまとめて計算）
+  terrain.heightAt(x, z)                境界の外1列を含む地表の高さ
+  carvable(height, x, y, z)             高さの範囲・液体に接していないか
+  inCaveShape(grid, x, y, z)            三線形補間した値が負なら削る
+isCarved(x, y, z)                       1点だけ判定（木・スポーンの判定に使う）
+```
+
 ### 構造物の配置
 ```
 createStructurePlacer(seed, worldgen, registry, terrain)
@@ -157,6 +171,7 @@ createStructurePlacer(seed, worldgen, registry, terrain)
 place(chunk)                            地形の生成後に呼ぶ
   placementsInChunk(ncx, ncz)           周囲 reach チャンクの起点（決定的な乱数）
     terrain.surfaceBlockAt(x, z)        置いてよい地表か
+    terrain.isCarved(x, y - 1, z)       根元が洞窟で削られていないか
     terrain.heightAt(x, z)
     gen.build(def, rand, blockId)       tree / template がブロックの一覧を返す
   canPlaceStructureBlock(...)           チャンク内に入るブロックだけ、規則に従って書き込む

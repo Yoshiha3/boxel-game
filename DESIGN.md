@@ -73,8 +73,37 @@ liquid は自動的に `liquid: true` になる。
 - 透過: 葉とガラスはアルファ 0 のピクセルを持ち、`alphaTest` で切り抜く
 
 ## ワールドの生成器（`src/world/worldGenerator.js`）
-- `createWorldGenerator(seed, worldgen, registry)` は、地形の生成（`terrain.generate`）と構造物の配置（`structures.place`）を順に行う生成器を返す。地形の関数（`heightAt` など）もそのまま公開する
-- 生成のコストの目安（ブラウザで計測）: 地形 + 木で 1 チャンクあたり約 0.2ms、メッシュ生成は約 1ms
+- `createWorldGenerator(seed, worldgen, registry)` は、地形の生成（`terrain.generate`）→ 洞窟の削り（`caves.carve`）→ 構造物の配置（`structures.place`）を順に行う生成器を返す。地形の関数（`heightAt` など）と `isCarved` も公開する
+- 生成のコストの目安（ブラウザで計測）: 地形 + 洞窟 + 木で 1 チャンクあたり約 1ms、メッシュ生成は約 1ms
+
+## 洞窟（`src/world/caves.js`、`worldgen.json` の `caves`）
+```json
+"caves": {
+  "minY": 5,
+  "sampleStep": 4,
+  "tunnel": { "frequency": 0.01, "verticalScale": 1.6, "radius": 0.15 },
+  "cavern": { "frequency": 0.015, "threshold": 0.75, "maxY": 45 }
+}
+```
+| 項目 | 説明 |
+|---|---|
+| `minY` | これより下は削らない（岩盤とその上を残す） |
+| `sampleStep` | ノイズを計算する格子の間隔。16 と 128 を割り切る正の整数 |
+| `tunnel.frequency` | トンネルのノイズの周波数（小さいほど長くゆったり曲がる） |
+| `tunnel.verticalScale` | y 方向の周波数の倍率（大きいほど横に伸びたトンネルになる） |
+| `tunnel.radius` | トンネルの太さ |
+| `cavern.frequency` / `threshold` | 大空洞のノイズの周波数と、削るしきい値（大きいほど少ない） |
+| `cavern.maxY` | 大空洞が出る高さの上限（これより上は 1 ブロックごとにしきい値が 0.05 上がり、次第に出なくなる） |
+
+- 削り具合 `f = min(n1² + n2² - radius², threshold + max(0, y - maxY) × 0.05 - n3)`。`f < 0` なら削る
+  - n1, n2, n3 は 3D シンプレックスノイズ（シード + 10, 11, 12）。トンネルは2つのノイズがどちらも 0 に近い「線」になる部分
+- `f` は `sampleStep` 間隔の格子点（ワールド座標にそろえる）でだけ計算し、間は三線形補間する。チャンクの境界でも形がつながる
+- 削る条件: `minY ≤ y ≤ 地表の高さ`、元が固体、そのブロックと6方向の隣が削る前の地形で液体でない（`y > 地表` かつ `y ≤ seaLevel` を液体とみなす）。海や川の下に穴が開いて水が宙に浮くことはない
+- 地表のブロックも削るので、トンネルが地表まで届いた場所は入口になる
+- `isCarved(x, y, z)` は1点だけ同じ式で判定する（`carve` の結果と一致することをテストで確認）。木は根元の下が削られている場所には生やさない。スポーン地点も削られた場所を避ける
+- 削られる量の目安: 地下（y 6〜60）の約 8%
+- 洞窟の中の暗さ（光の計算）は未実装。地下も地上と同じ明るさで描く
+- `caves` を省略すると洞窟を作らない
 
 ## チャンク（`src/world/chunk.js`）
 - 1チャンクは 16 (X) × 128 (Y) × 16 (Z) のブロックの柱。中身は `Uint8Array` に数値IDで持つ

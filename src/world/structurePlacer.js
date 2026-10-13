@@ -30,7 +30,7 @@ export function canPlaceStructureBlock(registry, current, id, force) {
  * @param {number} seed
  * @param {any} worldgen worldgen.json の内容（structures を使う）
  * @param {import('../core/registry.js').Registry} registry
- * @param {{heightAt: (x: number, z: number) => number, surfaceBlockAt: (x: number, z: number) => number}} terrain
+ * @param {{heightAt: (x: number, z: number) => number, surfaceBlockAt: (x: number, z: number) => number, isCarved?: (x: number, y: number, z: number) => boolean}} terrain
  */
 export function createStructurePlacer(seed, worldgen, registry, terrain) {
   const blockId = (id) => registry.blockId(id);
@@ -75,6 +75,8 @@ export function createStructurePlacer(seed, worldgen, registry, terrain) {
         if (roll >= chance) continue;
         if (rule.ground.size && !rule.ground.has(terrain.surfaceBlockAt(x, z))) continue;
         const y = terrain.heightAt(x, z) + 1;
+        // 地表が洞窟で削られている場所には置かない（入口の上に浮かないように）
+        if (terrain.isCarved?.(x, y - 1, z)) continue;
         const blocks = rule.gen.build(rule.def, createRandom(hash3(seed, x, y, z)), blockId);
         out.push({ structure: rule.def.id, x, y, z, blocks });
       }
