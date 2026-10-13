@@ -6,6 +6,12 @@ three.js で作ったブロック型サンドボックスゲームです。ビ�
 
 ## 遊び方
 
+GitHub Pages で公開しています: https://yoshiha3.github.io/boxel-game/
+
+（main ブランチの内容がそのまま公開されます）
+
+### ローカルで動かす
+
 ローカルサーバーが必要です（JSON を `fetch` で読み込むため、`file://` で開いても動きません）。
 
 ```sh
